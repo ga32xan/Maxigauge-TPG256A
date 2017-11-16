@@ -11,16 +11,6 @@ import datetime as dt
 import matplotlib.dates as md
 import time
 
-class color:
-    HEADER 		= '\033[95m'
-    OKBLUE 		= '\033[94m'
-    WARNING 		= '\033[93m'
-    OKGREEN 		= '\033[92m'
-    FAIL 		= '\033[91m'
-    ENDC 		= '\033[0m'
-    BOLD 		= '\033[1m'
-    UNDERLINE 		= '\033[4m'
-
 class pressure_gauge():
     '''defines a class pressure gauges that take a name, channel and pressure value-array'''
     def __init__(self,name='not-set',channel=-1):
@@ -85,8 +75,7 @@ def get_pressures():
     PREP.pressure=float(str(read_port().split(',')[1]))
     #ts = ti.time()
     #tida = dt.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-    if debug: print('Pressures are - ' + 'Prep: ' + str(Prep.pressure) + 'STM: ' + str(STM.pressure) + 'ROUGH: ' + str(ROUGH.pressure))
-    if debug2: print('Types of returned pressures: ' + str(type(Prep.pressure)))
+    if debug: print('Pressures are ' + 'Prep: ' + Prep.pressure + 'STM: ' + STM.pressure + 'ROUGH: ' + ROUGH.pressure)
     return([PREP.pressure,STM.pressure,ROUGH.pressure])
     
     
@@ -114,21 +103,34 @@ def read_port(retry=3,retry_delay=0.5,wait=0.1):
     #if debug2: print('CTS line: ' + str(ser.cts))
     #if debug2: print('DSR line: ' + str(ser.dsr))
     
-    out = ''
+    read_val = ''
     input_buffersize = ser.in_waiting
-    while input_buffersize > 0:
-        input_buffersize_old = 0
-        time.sleep(wait)
-        if debug: print('Input buffersize: ' + str(input_buffersize))
-        out += ser.read(64).decode('utf-8')
-        if debug: print('accomplished')
-        if input_buffersize == input_buffersize_old:
-            break
-        else:
-            input_buffersize = input_buffersize_old
-       
-    if debug: print('Received msg: ' + str(out))
-    return out
+    for n in range(retry):
+        if debug2: print('inside for-loop - try #:' + str(n))
+        '''retry if buffersize changes while reading'''
+        while input_buffersize > 0:
+            
+            if debug2: print('Got inputbuffer > 0: inside while-loop')
+            '''read COM-buffer and extract value'''
+            
+            #if debug2: print('Waiting for ' + str(wait) + ' seconds')
+            #time.sleep(wait)
+            
+            if debug2: print('Input buffersize: ' + str(input_buffersize))
+            print('read value' + str(read_val))
+            read_val = ser.read(64).decode('utf-8').strip('\r\n')
+            read_val = read_val.strip('\n')
+            
+            if debug2: print('accomplished')
+            input_buffersize_check = input_buffersize
+            
+            if debug: print('Received msg: ' + str(out) + ' on try ' + str(n))
+            ''' Need ERROR handling! '''
+            if input_buffersize == input_buffersize_check:
+                return read_val
+            else:
+                input_buffersize = input_buffersize_check
+        time.sleep(retry_delay)
         
 
 def get_info():
@@ -157,18 +159,17 @@ def get_info():
     print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
     print('RS485 settings: ' +  str(ser.rs485_mode))
 
+def plot_pres(a):
+    ax.plot(times,a[0],label=labels[0],color=col[0])
+    fig.canvas.draw()
+
 def initialize():
     global ser
-    try:
-        ser = serial.Serial(port='COM6',timeout=1,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
+    ser = serial.Serial(port='COM6',timeout=1,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
     #clear all old buffer in case come trash is in them
-        ser.reset_input_buffer()
-        ser.reset_output_buffer()
-        ser.flushInput()
-        if debug: print('...Initialized...')
-    except:
-        print('Initialization failed')
-        
+    ser.reset_input_buffer()
+    ser.reset_output_buffer()
+    ser.flushInput()
     #print full configuration of comport into console
     show_info=input("Show configuration? If so type y or Y")
     if show_info == 'y':
@@ -177,28 +178,46 @@ def initialize():
         get_info()
 
 if __name__ == '__main__':
-    '''not executed when this files is imported from another python file!! '''
     global ser
     debug = True
     debug2 = True
     try:
         initialize()
     except:
-        print('COM connection NOT opened')
+        print('Could not initialize COM connection')
     
     try:    
-        if debug2: print(color.HEADER + '...Updating pressures...' + color.ENDC)
-        get_pressures() # update values of pressure gauges
-        if debug2: print('...Plotting...')
         plt.ion()
         fig,ax=plt.subplots()
-        labels=[Prep.name,STM.name,ROUGH.name]
+        labels=['Prep pressure','STM pressure','Rough pump']
         col=['g','b','r']
+        times=[0]
+        first_pre=get_pressures()
+        pressures=[[first_pre[0]],[first_pre[1]],[first_pre[2]]]
         prep=ax.plot(times, pressures[0] ,label=labels[0],color=col[0])
+        #stm,=ax.plot(times, pressures[1] ,label=labels[1],color=col[1])
+        #rp,=ax.plot(times, pressures[2] ,label=labels[2],color=col[2])
         ax.set_yscale('log')
         ax.set_xlim(min(times))
         plt.legend()
         fig.canvas.draw()
+        for i in range(10):
+            #print(get_pressures())
+            neupres=get_pressures()#gets new pressures [PREP,STM,ROUGH]
+            pressures[0].append(neupres[0])
+            pressures[1].append(neupres[1])
+            pressures[2].append(neupres[2])
+            times.append(i+1)
+            ax.clear()
+            plot_pres(pressures)
+            #prep.set_xdata(times)
+            #stm.set_xdata(times)
+            #rp.set_xdata(times)
+            #prep.set_ydata(pressures[0])
+            #stm.set_ydata(pressures[1])
+            #rp.set_ydata(pressures[2])
+            ax.set_xlim(times[0]-times[1],times[-1]+times[1]-times[0])
+            plt.draw()
+            time.sleep(0.5)
     except:    
-        print('Could not draw all the stuff')
         ser.close()
