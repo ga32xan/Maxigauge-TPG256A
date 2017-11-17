@@ -170,7 +170,8 @@ if __name__ == '__main__':
 	if os.path.isfile('pressure-log.txt'):
 		header = '##########################################################################'
 	with open("pressure-log.txt", "a") as myfile:
-		myfile.write(header)myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
+		myfile.write(header)
+		myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
 	sens={}
 	for j in range(6):
 		sens['sen{0}'.format(j)],=ax.plot(times,pressures[j],'o',ls='-',color=col[j],label=labels[j])
