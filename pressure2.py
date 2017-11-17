@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-?!!Describe what program does and what it needs?!!
+Created on Thu Nov 16 12:59:26 2017
+
+@author: The greatest hexxor tha world!
 """
 import time
 import serial
@@ -73,11 +75,12 @@ def send_command(command):
     if debug2: print('CTS line: ' + str(ser.cts))
     if debug2: print('DSR line: ' + str(ser.dsr))
     ser.write(convinput)            #send to wire
-    time.sleep(0.2)
+    time.sleep(1)
     if debug2: print('########################')
     if debug2: print('Send Command: ' + str(input))
     
 def read_port():
+    global err
     ''' Reads serial port, gets bytes over wire, decodes them with utf-8'''
     ''' and returns string with received message'''
     if debug: print('########################')
@@ -94,7 +97,7 @@ def read_port():
         if input_buffersize == 0:
             print('No data in input buffer...No data received')
     while input_buffersize > 0:
-        '''  '''
+        ''' runs through twice to check consistency of received message '''
         if debug: print('Input buffersize: ' + str(input_buffersize))
         if debug: print('...ser.read ...')
         input_buffersize_old = 0
@@ -102,11 +105,11 @@ def read_port():
         out += ser.read(64).decode('utf-8')
         if debug: print('accomplished')
         if input_buffersize == input_buffersize_old:
+            if debug: print('Received msg: ' + str(out))
             break
         else:
             input_buffersize = input_buffersize_old
         
-    if debug: print('Received msg: ' + str(out))
     return out
 
 def get_info():
@@ -137,9 +140,10 @@ def get_info():
     print('RS485 settings: ' +  str(ser.rs485_mode))
 
 def init_serial():
+    ''' Initialized COM port at port 1 '''
     global ser       #create global serial-connector object
     try:
-        ser = serial.Serial(port='COM1',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
+        ser = serial.Serial(port='COM1',timeout=1,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
     except IndexError as err:
         print('Failed opening serial port...Try reloading the Console')
     if debug2: get_info()
