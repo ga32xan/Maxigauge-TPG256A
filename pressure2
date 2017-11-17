@@ -166,9 +166,11 @@ if __name__ == '__main__':
 			labels[num]=labels_begin[num]+' - Identification error'
 	datenow=dt.datetime.now().strftime(date_fmt)
 	times.append(mdate.datestr2num(datenow))
-	with open("pressure.txt", "a") as myfile:
-		myfile.write("Time\t\t\t\t\tSTM [mbar]\t\tRough [mbar]\tPrep [mbar]\t\tSensor 4 [mbar]\t\tSensor 5 [mbar]\t\tSensor 6 [mbar]\n")
-		myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
+	header = 'Time\t\t\t\t\tSTM [mbar]\t\tRough [mbar]\tPrep [mbar]\t\tSensor 4 [mbar]\t\tSensor 5 [mbar]\t\tSensor 6 [mbar]\n'
+	if os.path.isfile('pressure-log.txt'):
+		header = '##########################################################################'
+	with open("pressure-log.txt", "a") as myfile:
+		myfile.write(header)myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
 	sens={}
 	for j in range(6):
 		sens['sen{0}'.format(j)],=ax.plot(times,pressures[j],'o',ls='-',color=col[j],label=labels[j])
