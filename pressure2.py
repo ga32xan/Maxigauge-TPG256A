@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Nov 16 12:59:26 2017
-
-@author: The greatest hexxor tha world!
+?!!Describe what program does and what it needs?!!
 """
 import time
 import serial
