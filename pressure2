@@ -24,6 +24,13 @@ def to_bytes(seq):
         for item in seq:
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
+'''
+def bytetoarray(byte):
+    array = []
+    for i in range(len(byte)):
+        array+=byte[i]
+    return array
+'''
 
 # configure the serial connections (the parameters differs on the device you are connecting to)
 def main():
@@ -34,16 +41,17 @@ def main():
     #send_command('ETX\r\n')
     #print(read_port())
     #send_command('\x05\r\n')
-    send_command('PR1\r\n')
-    send_command('\x05')
-    STM=float(str(read_port().split(',')[1]))
-    send_command('PR2\r\n')
-    send_command('\x05\r\n')
-    ROUGH=float(str(read_port().split(',')[1]))
-    send_command('PR3\r\n')
-    send_command('\x05\r\n')
-    PREP=float(str(read_port().split(',')[1]))
-    return([STM,ROUGH,PREP])
+    press=[]
+    stat=[]
+    for j in range(6):
+        send_command('PR%i\r\n'%(j+1))
+        send_command('\x05')
+        string=read_port().split(',')
+        string_pres=str(string[1])
+        string_sta=int(string[0][-1])
+        press.append(float(string_pres))
+        stat.append(int(string_sta))
+    return(stat,press)
     
 def send_command(command):
     if debug: print('########################')
@@ -111,15 +119,15 @@ def get_info():
     print('RS485 settings: ' +  str(ser.rs485_mode))
 
 if __name__ == '__main__':
-	ser = serial.Serial(port='COM1',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
+	ser = serial.Serial(port='/dev/ttyUSB0',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
 	debug = 0
 	ser.reset_input_buffer()
 	ser.reset_output_buffer()
-	pressures=[[],[],[]]
+	pressures=[[],[],[],[],[],[]]
 	times=[]
-	col=['b','r','g']
-	labels=[r'STM $\leftarrow$',r'Rough $\rightarrow$',r'Prep $\leftarrow$']
+	col=['b','r','g','K','c','y']
 	
+	labels_begin=[r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
 	
 	fig=plt.figure(figsize=(10,6),dpi=100)
 	ax=fig.add_subplot(111)
@@ -127,50 +135,98 @@ if __name__ == '__main__':
 	plt.ion()
 	plt.yscale('log')
 	
-	stpre=main()
-	pressures[0].append(stpre[0])
-	pressures[1].append(stpre[1])
-	pressures[2].append(stpre[2])
+	stat,stpre=main()
+	
+	labels=['','','','','','']
+	
+	for num,sensor in enumerate(stat):
+		if sensor==0:
+			pressures[num].append(stpre[num])
+			if pressures[num][-1]>1e-1:
+				labels[num]=labels_begin[num]+r' $\rightarrow$'
+			elif pressures[num][-1]<1e-1:
+				labels[num]=labels_begin[num]+r' $\leftarrow$'
+		elif sensor==1:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Underrange'
+		elif sensor==2:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Overrange'
+		elif sensor==3:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Error'
+		elif sensor==4:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Off'
+		elif sensor==5:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Not found'
+		elif sensor==6:
+			pressures[num].append(0)
+			labels[num]=labels_begin[num]+' - Identification error'
 	datenow=dt.datetime.now().strftime(date_fmt)
 	times.append(mdate.datestr2num(datenow))
-	
 	with open("pressure.txt", "a") as myfile:
-		myfile.write("Time\t\t\t\t\tSTM [mbar]\t\tRough [mbar]\tPrep [mbar]\n")
-		myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2E\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1]))
-	
-	stm,=ax.plot(times,pressures[0],'o',ls='-',color=col[0],label=labels[0],)
-	prep,=ax.plot(times,pressures[2],'o',ls='-',color=col[2],label=labels[2])
-	rough1,=ax.plot(times,pressures[1],'o',ls='-',color=col[1],label=labels[1])
+		myfile.write("Time\t\t\t\t\tSTM [mbar]\t\tRough [mbar]\tPrep [mbar]\t\tSensor 4 [mbar]\t\tSensor 5 [mbar]\t\tSensor 6 [mbar]\n")
+		myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
+	sens={}
+	for j in range(6):
+		sens['sen{0}'.format(j)],=ax.plot(times,pressures[j],'o',ls='-',color=col[j],label=labels[j])
 	ax.set_ylim(1e-12,1e-4)
 	ax.set_xlabel('Time')
 	ax.set_ylabel('Pressure [mbar]')
 	
-	plt.legend()
+	ax.legend()
 	plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
 	plt.gcf().autofmt_xdate()
 	
 	ax2 = ax.twinx()
-	rough,=ax2.plot(times,pressures[1],'o',ls='-',color=col[1],label=labels[1])
+	for j in range(6):
+		if pressures[j][-1]>1e-1:
+			sens['sen{0}'.format(j)],=ax2.plot(times,pressures[j],'o',ls='-',color=col[j],label=labels[j])
 	ax2.set_ylim(1e-1,1e3)
 	ax2.set_yscale('log')
 	ax2.set_ylabel('Pressure [mbar]')
 	
 	while True:
-		pre=main()
+		ser.open()
+		status,pre=main()
 		datenow=dt.datetime.now().strftime(date_fmt)
-		with open("pressure.txt", "a") as myfile:
-			myfile.write("%s\t\t%.2E\t\t%.2e\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1]))
-		
 		times.append(mdate.datestr2num(datenow))
-		for n,j in enumerate(pre):
-			pressures[n].append(j)
-
-		stm.set_xdata(times)
-		rough.set_xdata(times)
-		prep.set_xdata(times)
-		stm.set_ydata(pressures[0])
-		rough.set_ydata(pressures[1])
-		prep.set_ydata(pressures[2])
+		ax.legend_.remove()
+		for num,sensor in enumerate(status):
+			if sensor==0:
+				pressures[num].append(pre[num])
+				if pressures[num][-1]>1e-1:
+					labels[num]=labels_begin[num]+r' $\rightarrow$'
+				elif pressures[num][-1]<1e-1:
+					labels[num]=labels_begin[num]+r' $\leftarrow$'
+			elif sensor==1:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Underrange'
+			elif sensor==2:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Overrange'
+			elif sensor==3:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Error'
+			elif sensor==4:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Off'
+			elif sensor==5:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Not found'
+			elif sensor==6:
+				pressures[num].append(0)
+				labels[num]=labels_begin[num]+' - Identification error'
+		with open("pressure.txt", "a") as myfile:
+			myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[0][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
+		
+		for j in range(6):
+			sens['sen{0}'.format(j)].set_xdata(times)
+			sens['sen{0}'.format(j)].set_ydata(pressures[j])
+			sens['sen{0}'.format(j)].set_label(labels[j])
+		ax.legend()
 		ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
 		plt.pause(0.05)
-	ser.close()
+		ser.close()
