@@ -1,0 +1,176 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Nov 16 12:59:26 2017
+
+@author: ltstm
+"""
+import time
+import serial
+import matplotlib.pylab as plt
+import datetime as dt
+import matplotlib.dates as mdate
+import numpy as np
+
+def to_bytes(seq):
+    """convert a sequence to a bytes type"""
+    if isinstance(seq, bytes):
+        return seq
+    elif isinstance(seq, bytearray):
+        return bytes(seq)
+    elif isinstance(seq, memoryview):
+        return seq.tobytes()
+    else:
+        b = bytearray()
+        for item in seq:
+            b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
+        return bytes(b)
+
+# configure the serial connections (the parameters differs on the device you are connecting to)
+def main():
+    #ser.read()
+    #pressure=[]
+    ser.flushInput()
+    
+    #send_command('ETX\r\n')
+    #print(read_port())
+    #send_command('\x05\r\n')
+    send_command('PR1\r\n')
+    send_command('\x05')
+    STM=float(str(read_port().split(',')[1]))
+    send_command('PR2\r\n')
+    send_command('\x05\r\n')
+    ROUGH=float(str(read_port().split(',')[1]))
+    send_command('PR3\r\n')
+    send_command('\x05\r\n')
+    PREP=float(str(read_port().split(',')[1]))
+    return([STM,ROUGH,PREP])
+    
+def send_command(command):
+    if debug: print('########################')
+    input=command.encode('utf-8')
+    if debug: print('Command string: ' + str(input))
+    convinput=to_bytes(input)
+    if debug: print('byte-input (as str repre): ' + str(convinput.decode('utf-8')))
+    if debug: print('CTS line: ' + str(ser.cts))
+    if debug: print('DSR line: ' + str(ser.dsr))
+    ser.write(convinput)
+    time.sleep(0.2)
+    if debug: print('########################')
+    if debug: print('Send Command: ' + str(input))
+    
+def read_port():
+    
+    if debug: print('########################')
+    if debug: print('Am I outWaiting?: ' + str(ser.out_waiting))
+    if debug: print('Am I inWaiting?: ' + str(ser.in_waiting))
+    if debug: print('########################')
+    if debug: print('...ser.read ...')
+    if debug: print('CTS line: ' + str(ser.cts))
+    if debug: print('DSR line: ' + str(ser.dsr))
+    
+    out = ''
+    input_buffersize = ser.in_waiting
+    while input_buffersize > 0:
+        input_buffersize_old = 0
+        time.sleep(0.2)
+        if debug: print('Input buffersize: ' + str(input_buffersize))
+        out += ser.read(64).decode('utf-8')
+        if debug: print('accomplished')
+        if input_buffersize == input_buffersize_old:
+            break
+        else:
+            input_buffersize = input_buffersize_old
+        
+    if debug: print('Received msg: ' + str(out))
+    return out
+
+def get_info():
+    print('############ Information about connection: ############')
+    print('Name of device: ' + ser.name)
+    print('@ port : ' + ser.port)
+    print('Port is open?: ' + str(ser.is_open))
+    print('state of ...')
+    print('   ... CTS line: ' + str(ser.cts))
+    print('   ... DSR line: ' + str(ser.dsr))
+    print('   ...  RI line: ' + str(ser.ri))
+    print('   ...  CD line: ' + str(ser.cd))
+
+    print('############ Can set values to: ######################')
+    print('port: ' + ser.port)
+    print('baudrate: ' + str(ser.baudrate))
+    print('bitesyze: ' + str(ser.bytesize))
+    print('parity: ' + str(ser.parity))
+    print('stopbits: ' + str(ser.stopbits))
+    print('read_timeout: ' + str(ser.timeout))
+    print('write_timeout: ' + str(ser.write_timeout))
+    print('inter byte timeout: ' + str(ser.inter_byte_timeout))
+    print('software flow control setting: ' + str(ser.xonxoff))
+    print('hardware flow control setting of ... ')
+    print('\t \t \t \t... CTS line: ' + str(ser.rtscts))
+    print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
+    print('RS485 settings: ' +  str(ser.rs485_mode))
+
+if __name__ == '__main__':
+	ser = serial.Serial(port='COM1',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
+	debug = 0
+	ser.reset_input_buffer()
+	ser.reset_output_buffer()
+	pressures=[[],[],[]]
+	times=[]
+	col=['b','r','g']
+	labels=[r'STM $\leftarrow$',r'Rough $\rightarrow$',r'Prep $\leftarrow$']
+	
+	
+	fig=plt.figure(figsize=(10,6),dpi=100)
+	ax=fig.add_subplot(111)
+	date_fmt = '%d-%m-%Y %H:%M:%S'
+	plt.ion()
+	plt.yscale('log')
+	
+	stpre=main()
+	pressures[0].append(stpre[0])
+	pressures[1].append(stpre[1])
+	pressures[2].append(stpre[2])
+	datenow=dt.datetime.now().strftime(date_fmt)
+	times.append(mdate.datestr2num(datenow))
+	
+	with open("pressure.txt", "a") as myfile:
+		myfile.write("Time\t\t\t\t\tSTM [mbar]\t\tRough [mbar]\tPrep [mbar]\n")
+		myfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2E\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1]))
+	
+	stm,=ax.plot(times,pressures[0],'o',ls='-',color=col[0],label=labels[0],)
+	prep,=ax.plot(times,pressures[2],'o',ls='-',color=col[2],label=labels[2])
+	rough1,=ax.plot(times,pressures[1],'o',ls='-',color=col[1],label=labels[1])
+	ax.set_ylim(1e-12,1e-4)
+	ax.set_xlabel('Time')
+	ax.set_ylabel('Pressure [mbar]')
+	
+	plt.legend()
+	plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
+	plt.gcf().autofmt_xdate()
+	
+	ax2 = ax.twinx()
+	rough,=ax2.plot(times,pressures[1],'o',ls='-',color=col[1],label=labels[1])
+	ax2.set_ylim(1e-1,1e3)
+	ax2.set_yscale('log')
+	ax2.set_ylabel('Pressure [mbar]')
+	
+	while True:
+		pre=main()
+		datenow=dt.datetime.now().strftime(date_fmt)
+		with open("pressure.txt", "a") as myfile:
+			myfile.write("%s\t\t%.2E\t\t%.2e\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1]))
+		
+		times.append(mdate.datestr2num(datenow))
+		for n,j in enumerate(pre):
+			pressures[n].append(j)
+
+		stm.set_xdata(times)
+		rough.set_xdata(times)
+		prep.set_xdata(times)
+		stm.set_ydata(pressures[0])
+		rough.set_ydata(pressures[1])
+		prep.set_ydata(pressures[2])
+		ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
+		plt.pause(0.05)
+	ser.close()
