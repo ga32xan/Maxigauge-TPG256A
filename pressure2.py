@@ -179,9 +179,9 @@ if __name__ == '__main__':
         if sensor==0:
             pressures[num].append(stpre[num])
             if pressures[num][-1]>1e-1:
-                labels[num]=labels_begin[num]+r' $\rightarrow$ %.2e mbar'%pressures[num][-1]
+                labels[num]=labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
             elif pressures[num][-1]<1e-1:
-                labels[num]=labels_begin[num]+r' $\leftarrow$ %.2e mbar'%pressures[num][-1]
+                labels[num]=labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
         elif sensor==1:
             pressures[num].append(1e10)
             labels[num]=labels_begin[num]+' - Underrange'
@@ -210,9 +210,10 @@ if __name__ == '__main__':
     with open("pressure-log.txt", "a") as logfile:
         logfile.write(header)
         logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
-    sens={}
+    sensl={}
+    sensr={}
     for j in range(6):
-        sens['sen{0}'.format(j)],=ax.plot(times,pressures[j],'.',ls='-',color=col[j],label=labels[j])
+        sensl['sen1{0}'.format(j)],=ax.plot(times,pressures[j],'.',ls='-',color=col[j],label=labels[j])
     ax.set_ylim(1e-12,1e-4)
     ax.set_xlabel('Time')
     ax.set_ylabel('Pressure [mbar]')
@@ -224,7 +225,7 @@ if __name__ == '__main__':
     ax2 = ax.twinx()
     for j in range(6):
         if pressures[j][-1]>1e-1:
-            sens['sen{0}'.format(j)],=ax2.plot(times,pressures[j],'.',ls='-',color=col[j])
+            sensr['sen2{0}'.format(j)],=ax2.plot(times,pressures[j],'.',ls='-',color=col[j])
     ax2.set_ylim(1e-1,1e3)
     ax2.set_yscale('log')
     ax2.set_ylabel('Pressure [mbar]')
@@ -244,9 +245,9 @@ if __name__ == '__main__':
             if sensor==0:
                 pressures[num].append(pre[num])
                 if pressures[num][-1]>1e-1:
-                    labels[num]=labels_begin[num]+r' $\rightarrow$ %.2e mbar'%pressures[num][-1]
+                    labels[num]=labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
                 elif pressures[num][-1]<1e-1:
-                    labels[num]=labels_begin[num]+r' $\leftarrow$ %.2e mbar'%pressures[num][-1]
+                    labels[num]=labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
             elif sensor==1:
                 pressures[num].append(1e10)
                 labels[num]=labels_begin[num]+' - Underrange'
@@ -269,9 +270,11 @@ if __name__ == '__main__':
             logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[0][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
         
         for j in range(6):
-            sens['sen{0}'.format(j)].set_xdata(times)
-            sens['sen{0}'.format(j)].set_ydata(pressures[j])
-            sens['sen{0}'.format(j)].set_label(labels[j])
+            sensl['sen1{0}'.format(j)].set_xdata(times)
+            sensl['sen1{0}'.format(j)].set_ydata(pressures[j])
+            sensl['sen1{0}'.format(j)].set_label(labels[j])
+            sensr['sen2{0}'.format(j)].set_xdata(times)
+            sensr['sen2{0}'.format(j)].set_ydata(pressures[j])
         ax.legend(loc='best')
         ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
 		#ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
