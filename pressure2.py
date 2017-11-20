@@ -148,9 +148,16 @@ def init_serial():
     ''' Initializes serial connection at COM5 '''
     global ser       #create global serial-connector object
     try:
-        ser = serial.Serial(port='COM5',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
+        ser = serial.Serial(port='COM5',\
+			    timeout=0.5,\
+			    baudrate=9600,\
+			    stopbits=serial.STOPBITS_ONE,\
+			    bytesize=serial.EIGHTBITS,\
+			    parity=serial.PARITY_NONE\
+			   )    
     except IndexError as err:
-        print('Failed opening serial port at port' + str(ser.port) + '...Try reloading the Console')
+        print('Failed opening serial port at port' + str(ser.port))
+	print('Make sure you are on the right COM port and try reloading the console')
     if debug2: get_info()
     ser.reset_input_buffer()
     ser.reset_output_buffer()
