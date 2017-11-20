@@ -277,5 +277,5 @@ if __name__ == '__main__':
             sensr['sen2{0}'.format(j)].set_ydata(pressures[j])
         ax.legend(loc='best')
         ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
+		#ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
         plt.pause(0.05)
-        
