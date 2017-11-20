@@ -30,8 +30,7 @@ def to_bytes(seq):
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
 
-def read_gauges():
-    global ser
+def read_gauges(ser):
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
     '''  There is one list for status[CH] called stat and one for pressure[CH] called press returned'''
     ser.flushInput()
@@ -43,8 +42,8 @@ def read_gauges():
     stat = []
     for j in range(6): 			# for each channel
 	''' request data for specific channel '''
-        send_command('PR%i\r\n'%(j+1))  #request channel
-        send_command('\x05')            #enquire data
+        send_command(ser, 'PR%i\r\n'%(j+1))  #request channel
+        send_command(ser, '\x05')            #enquire data
         '''what the controller returns is something like 'x,x.xxxEsx <CR><LF>'
         first digit is the error code, then comma, then pressure followed by Carrige return <CR>, Line feed <LF>
         		x,x.xxxEsx <CR><LF>
@@ -52,7 +51,7 @@ def read_gauges():
         0 Measurement data okay, 1 Underrange, 2 Overrange
         3 Sensor error, 4 Sensor off, 5 No sensor, 6 Identification error
         '''
-        string=read_port().split(',') 		# splits read string into string[-1],string[0]
+        string=read_port(ser).split(',') 		# splits read string into string[-1],string[0]
         if debug: print(string)
         string_pres=str(string[1])       	#pressure value converted to string
         if debug: print('Read pressure :' + string_pres)
@@ -62,9 +61,8 @@ def read_gauges():
         stat.append(int(string_sta))        	#append int(status) to status list
     return(stat,press)
     
-def send_command(command):
+def send_command(ser,command):
     ''' Takes ascii string 'command' and converts it to bytes to send it over serial connection '''
-    global ser 
     if debug2: print('########################')
     input = command.encode('utf-8')   #encode as utf-8
     if debug2: print('Command string: ' + str(input))
@@ -77,7 +75,7 @@ def send_command(command):
     if debug2: print('########################')
     if debug2: print('Send Command: ' + str(input))
     
-def read_port():
+def read_port(ser):
     ''' Reads serial port, gets bytes over wire, decodes them with utf-8'''
     ''' and returns string with received message'''
     if debug:  print('########################')
@@ -110,15 +108,14 @@ def read_port():
             input_buffersize = input_buffersize_old
     return out
 
-def test_connection():
-    ''' Unimplemented testing routine to test the serial connection '''
-    send_command('PR%i\r\n'%(j+1))  #request Channel 1-6
-    send_command('\x05')            #enquire data
-    read_command('')
+def test_connection(ser):
+    ''' Unimplemented testing routine to test the serial connection object passed as ser '''
+    send_command(ser,'PR%i\r\n'%(j+1))  #request Channel 1-6
+    send_command(ser,'\x05')            #enquire data
+    read_port(ser)
     
-def get_info():
+def get_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
-    global ser
     print('############ Information about connection: ############')
     print('Name of device: ' + ser.name)
     print('@ port : ' + ser.port)
@@ -144,45 +141,55 @@ def get_info():
     print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
     print('RS485 settings: ' +  str(ser.rs485_mode))
 
-def init_serial():
-    ''' Initializes serial connection at COM5 '''
-    global ser       #create global serial-connector object
+def init_serial(com_port = 5):
+    ''' Initializes serial connection, defaults to COM5 '''
     try:
-        ser = serial.Serial(port='COM5',\
-			    timeout=0.5,\
+        ser = serial.Serial(timeout=0.5,\
 			    baudrate=9600,\
 			    stopbits=serial.STOPBITS_ONE,\
 			    bytesize=serial.EIGHTBITS,\
 			    parity=serial.PARITY_NONE\
 			   )    
+        ser.port = 'COM' + str(com_port)
+	    ser.reset_input_buffer()
+        ser.reset_output_buffer()
+        if debug2: get_info(ser)
+        return ser
     except IndexError as err:
         print('Failed opening serial port at port' + str(ser.port))
-	print('Make sure you are on the right COM port and try reloading the console')
-    if debug2: get_info()
-    ser.reset_input_buffer()
-    ser.reset_output_buffer()
+	    print('Make sure you are on the right COM port and try reloading the console')
 
 if __name__ == '__main__':
     ''' Messy routine that updates the data, plot it and updates the logfile '''
     ''' Every time the program is started and writes to the same logfile a line of '#############' is added '''
     ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
-    global ser
-    debug = False
-    debug2 = False
-    init_serial()
+    debug = False       # First debug level   
+    debug2 = False      # extensive debugging
+    if debug2: debug = True #make sure both are enabled if debug2 is enabled
+    com_port = int(input('Enter COM-Port-Number (1-10)'))   #input COM port
+    ser = init_serial(com_port) #initialize at this port
     
-    pressures = [[],[],[],[],[],[]]
-    times = []
-    col = ['b','r','g','K','c','y']
+    pressures = [[],[],[],[],[],[]] #six membered list of lists: 
+    ''' [
+    [CH1p1, CH1p2, ...],
+    [CH2p1, CH2p2, ...],
+    [CH3p1, CH3p2, ...],
+    ...
+    '''
+    times = []  #  lis twhen pressures are recorded (approximately)
+    col = ['b','r','g','K','c','y'] #colors
     
     labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
     
     fig = plt.figure(figsize=(10,6),dpi=100)
     ax = fig.add_subplot(111)
-    plt.ion()
+    plt.ion()                      #autoupdate plot
     plt.yscale('log')
     
-    stat,stpre=read_gauges()
+    ''' read gauges, pass serial connection to them, returns (list,list) '''
+    ''' stat = [(int)] = [0,,0,5,5,5] & press = [float] = [1e-1,1e-10,1e-10,2e-2,2e-2,2e-2] '''
+    ''' these are to be processed before written to log file '''
+    stat,stpre=read_gauges(ser)    
     
     labels = ['','','','','','']
     
