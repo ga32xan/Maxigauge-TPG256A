@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov 16 12:59:26 2017
+@author: Mathis Pörtner, Domenik Zimmermann
+Versions: To make it runs, install python 3.6
+Additional dependencies: matplotlib, numpy
 
-@author: The greatest hexxor tha world!
 """
 import time
 import serial
@@ -25,19 +27,11 @@ def to_bytes(seq):
         for item in seq:
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
-'''
-def bytetoarray(byte):
-    array = []
-    for i in range(len(byte)):
-        array+=byte[i]
-    return array
-'''
 
-# configure the serial connections (the parameters differs on the device you are connecting to)
 def read_gauges():
     global ser
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
-    '''  There is one list for status[CH] and one for pressure[CH] '''
+    '''  There is one list for status[CH] called stat and one for pressure[CH] called press returned'''
     ser.flushInput()
 
     #send_command('ETX\r\n')
@@ -66,8 +60,8 @@ def read_gauges():
     return(stat,press)
     
 def send_command(command):
-    global ser 
     '''Takes ascii string 'command' and converts it to bytes and sned it over serial connection '''
+    global ser 
     if debug2: print('########################')
     input=command.encode('utf-8')   #encode as utf-8
     if debug2: print('Command string: ' + str(input))
@@ -81,24 +75,25 @@ def send_command(command):
     if debug2: print('Send Command: ' + str(input))
     
 def read_port():
-    global err
     ''' Reads serial port, gets bytes over wire, decodes them with utf-8'''
     ''' and returns string with received message'''
-    if debug: print('########################')
+    if debug:  print('########################')
     if debug2: print('Am I outWaiting?: ' + str(ser.out_waiting))
-    if debug: print('Am I inWaiting?: ' + str(ser.in_waiting))
-    if debug: print('Input buffer size: ' + str(ser.in_waiting))
-    if debug: print('########################')
+    if debug:  print('Am I inWaiting?: ' + str(ser.in_waiting))
+    if debug:  print('Input buffer size: ' + str(ser.in_waiting))
+    if debug:  print('########################')
     if debug2: print('CTS line: ' + str(ser.cts))
     if debug2: print('DSR line: ' + str(ser.dsr))
     
-    out = ''#string to hold the received message, empty one for new reading
+    out = ''                            #string to hold the received message, empty one for new reading
     input_buffersize = ser.in_waiting   #input_buffersize: Numbers of bytes received
     if debug:
         if input_buffersize == 0:
             print('No data in input buffer...No data received')
     while input_buffersize > 0:
         ''' runs through twice to check consistency of received message '''
+        ''' if first read msg matches snd read msg the input is believed to be consistend '''
+        ''' No errror handling => program breaks at this point if no meaningfull serial connection is established '''
         if debug: print('Input buffersize: ' + str(input_buffersize))
         if debug: print('...ser.read ...')
         input_buffersize_old = 0
@@ -110,13 +105,15 @@ def read_port():
             break
         else:
             input_buffersize = input_buffersize_old
-        
     return out
 def test_connection():
+    ''' Unimplemented testing routine to test the serial connection '''
     send_command('PR%i\r\n'%(j+1))  #request Channel 1-6
     send_command('\x05')            #enquire data
     read_command('')
+    
 def get_info():
+    ''' Get information about the serial connection, prints only if debug2 = True '''
     global ser
     print('############ Information about connection: ############')
     print('Name of device: ' + ser.name)
@@ -144,17 +141,20 @@ def get_info():
     print('RS485 settings: ' +  str(ser.rs485_mode))
 
 def init_serial():
-    ''' Initialized COM port at port 1 '''
+    ''' Initializes serial connection at COM5 '''
     global ser       #create global serial-connector object
     try:
         ser = serial.Serial(port='COM5',timeout=0.5,baudrate=9600,stopbits=serial.STOPBITS_ONE,bytesize=serial.EIGHTBITS,parity=serial.PARITY_NONE)    
     except IndexError as err:
-        print('Failed opening serial port...Try reloading the Console')
+        print('Failed opening serial port at port' + str(ser.port) + '...Try reloading the Console')
     if debug2: get_info()
     ser.reset_input_buffer()
     ser.reset_output_buffer()
 
 if __name__ == '__main__':
+    ''' Messy routine that updates the data, plot it and updates the logfile '''
+    ''' Every time the program is started and writes to the same logfile a line of '#############' is added '''
+    ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
     global ser
     debug = False
     debug2 = False
@@ -231,6 +231,8 @@ if __name__ == '__main__':
     ax2.set_ylabel('Pressure [mbar]')
     
     while True:
+        '''  Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
+        ''' This should be done via a try: except: statement to make it exit nicely'''
         if ser.is_open:
             status,pre=read_gauges()
             ser.close()
