@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Nov 16 12:59:26 2017
-@author: Mathis Pörtner, Domenik Zimmermann
+@author: Mathias Pörtner, Domenik Zimmermann
 Versions: To make it run, install python 3.6
 Additional dependencies: matplotlib, numpy
 For Windows: Anaconda is a bundled Python version (https://anaconda.org/anaconda/python)
