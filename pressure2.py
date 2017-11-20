@@ -2,9 +2,11 @@
 """
 Created on Thu Nov 16 12:59:26 2017
 @author: Mathis Pörtner, Domenik Zimmermann
-Versions: To make it runs, install python 3.6
+Versions: To make it run, install python 3.6
 Additional dependencies: matplotlib, numpy
-
+For Windows: Anaconda is a bundled Python version (https://anaconda.org/anaconda/python)
+For Linux: See above or sudo apt-get install python3 pip, pip install matplotlib, pip install numpy, pip install serial
+Edit this file with care and 4 space indentation
 """
 import time
 import serial
@@ -15,7 +17,7 @@ import numpy as np
 import os
 
 def to_bytes(seq):
-    """convert a sequence to a bytes type"""
+    """convert a sequence of int/str to a byte sequence and returns it"""
     if isinstance(seq, bytes):
         return seq
     elif isinstance(seq, bytearray):
@@ -37,33 +39,34 @@ def read_gauges():
     #send_command('ETX\r\n')
     #print(read_port())
     #send_command('\x05\r\n')
-    press=[]
-    stat=[]
-    for j in range(6):
-        send_command('PR%i\r\n'%(j+1))  #request Channel 1-6
+    press = []
+    stat = []
+    for j in range(6): 			# for each channel
+	''' request data for specific channel '''
+        send_command('PR%i\r\n'%(j+1))  #request channel
         send_command('\x05')            #enquire data
-        #what the controller returns is something like 'x,x.xxxEsx <CR><LF>'
-        #first digit is the error code, seconds one is the pressure
-        '''x,x.xxxEsx <CR><LF>
-        x[Status],[x.xxxEsx] Measurement value (always exponential format)
+        '''what the controller returns is something like 'x,x.xxxEsx <CR><LF>'
+        first digit is the error code, then comma, then pressure followed by Carrige return <CR>, Line feed <LF>
+        		x,x.xxxEsx <CR><LF>
+        x[Status],[x.xxxEsx] Measurement value (always engeneers' format)
         0 Measurement data okay, 1 Underrange, 2 Overrange
-        3 Sensor error, 4 Sensor off, 5 No sensor, 6 Identification erro
+        3 Sensor error, 4 Sensor off, 5 No sensor, 6 Identification error
         '''
-        string=read_port().split(',') # splits read string into string[-1],string[0]
+        string=read_port().split(',') 		# splits read string into string[-1],string[0]
         if debug: print(string)
-        string_pres=str(string[1])       #pressure value converted to string
+        string_pres=str(string[1])       	#pressure value converted to string
         if debug: print('Read pressure :' + string_pres)
-        string_sta=int(string[0][-1])    #status value converted to int
+        string_sta=int(string[0][-1])    	#status value converted to int
         if debug: print('Read status :' + str(string_sta))
-        press.append(float(string_pres))    #append float of pressure to press-list
-        stat.append(int(string_sta))        #append int(status) to status list
+        press.append(float(string_pres))    	#append float of pressure to press-list
+        stat.append(int(string_sta))        	#append int(status) to status list
     return(stat,press)
     
 def send_command(command):
-    '''Takes ascii string 'command' and converts it to bytes and sned it over serial connection '''
+    ''' Takes ascii string 'command' and converts it to bytes to send it over serial connection '''
     global ser 
     if debug2: print('########################')
-    input=command.encode('utf-8')   #encode as utf-8
+    input = command.encode('utf-8')   #encode as utf-8
     if debug2: print('Command string: ' + str(input))
     convinput=to_bytes(input)       #convert to byte sequence
     if debug2: print('byte-input (as str repre): ' + str(convinput.decode('utf-8')))
@@ -106,6 +109,7 @@ def read_port():
         else:
             input_buffersize = input_buffersize_old
     return out
+
 def test_connection():
     ''' Unimplemented testing routine to test the serial connection '''
     send_command('PR%i\r\n'%(j+1))  #request Channel 1-6
@@ -160,48 +164,48 @@ if __name__ == '__main__':
     debug2 = False
     init_serial()
     
-    pressures=[[],[],[],[],[],[]]
-    times=[]
-    col=['b','r','g','K','c','y']
+    pressures = [[],[],[],[],[],[]]
+    times = []
+    col = ['b','r','g','K','c','y']
     
-    labels_begin=[r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
+    labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
     
-    fig=plt.figure(figsize=(10,6),dpi=100)
-    ax=fig.add_subplot(111)
+    fig = plt.figure(figsize=(10,6),dpi=100)
+    ax = fig.add_subplot(111)
     plt.ion()
     plt.yscale('log')
     
     stat,stpre=read_gauges()
     
-    labels=['','','','','','']
+    labels = ['','','','','','']
     
     for num,sensor in enumerate(stat):
-        if sensor==0:
+        if sensor == 0:
             pressures[num].append(stpre[num])
-            if pressures[num][-1]>1e-1:
-                labels[num]=labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
-            elif pressures[num][-1]<1e-1:
-                labels[num]=labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
-        elif sensor==1:
+            if pressures[num][-1] > 1e-1:
+                labels[num] = labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
+            elif pressures[num][-1] < 1e-1:
+                labels[num] = labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
+        elif sensor == 1:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Underrange'
-        elif sensor==2:
+            labels[num] = labels_begin[num]+' - Underrange'
+        elif sensor == 2:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Overrange'
-        elif sensor==3:
+            labels[num] = labels_begin[num]+' - Overrange'
+        elif sensor == 3:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Error'
-        elif sensor==4:
+            labels[num] = labels_begin[num]+' - Error'
+        elif sensor == 4:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Off'
-        elif sensor==5:
+            labels[num] = labels_begin[num]+' - Off'
+        elif sensor == 5:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Not found'
-        elif sensor==6:
+            labels[num] = labels_begin[num]+' - Not found'
+        elif sensor == 6:
             pressures[num].append(1e10)
-            labels[num]=labels_begin[num]+' - Identification error'
+            labels[num] = labels_begin[num]+' - Identification error'
     date_fmt = '%d-%m-%Y %H:%M:%S'
-    datenow=dt.datetime.now().strftime(date_fmt)    # get formatted datetime object
+    datenow = dt.datetime.now().strftime(date_fmt)    # get formatted datetime object
     times.append(mdate.datestr2num(datenow))        #and append it to times list
     #write header if logfile was never used ...
     header = 'Time\t\t\t\tSTM [mbar]\t\tRough [mbar]\t\tPrep [mbar]\t\tSensor 4 [mbar]\t\t\tSensor 5 [mbar]\t\t\tSensor 6 [mbar]\n'
@@ -210,10 +214,10 @@ if __name__ == '__main__':
     with open("pressure-log.txt", "a") as logfile:
         logfile.write(header)
         logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
-    sensl={}
-    sensr={}
+    sensl = {}
+    sensr = {}
     for j in range(6):
-        sensl['sen1{0}'.format(j)],=ax.plot(times,pressures[j],'.',ls='-',color=col[j],label=labels[j])
+        sensl['sen1{0}'.format(j)], = ax.plot(times,pressures[j],'.',ls='-',color = col[j],label=labels[j])
     ax.set_ylim(1e-12,1e-4)
     ax.set_xlabel('Time')
     ax.set_ylabel('Pressure [mbar]')
@@ -225,7 +229,7 @@ if __name__ == '__main__':
     ax2 = ax.twinx()
     for j in range(6):
         if pressures[j][-1]>1e-1:
-            sensr['sen2{0}'.format(j)],=ax2.plot(times,pressures[j],'.',ls='-',color=col[j])
+            sensr['sen2{0}'.format(j)], = ax2.plot(times,pressures[j],'.',ls = '-', color = col[j])
     ax2.set_ylim(1e-1,1e3)
     ax2.set_yscale('log')
     ax2.set_ylabel('Pressure [mbar]')
@@ -234,40 +238,40 @@ if __name__ == '__main__':
         '''  Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely'''
         if ser.is_open:
-            status,pre=read_gauges()
+            status,pre = read_gauges()
             ser.close()
         else:
             ser.open()
-            status,pre=read_gauges()
+            status,pre = read_gauges()
             ser.close()
-        datenow=dt.datetime.now().strftime(date_fmt)
+        datenow = dt.datetime.now().strftime(date_fmt)
         times.append(mdate.datestr2num(datenow))
         ax.legend_.remove()
         for num,sensor in enumerate(status):
-            if sensor==0:
+            if sensor == 0:
                 pressures[num].append(pre[num])
-                if pressures[num][-1]>1e-1:
-                    labels[num]=labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
-                elif pressures[num][-1]<1e-1:
-                    labels[num]=labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
-            elif sensor==1:
+                if pressures[num][-1] > 1e-1:
+                    labels[num] = labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
+                elif pressures[num][-1] < 1e-1:
+                    labels[num] = labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
+            elif sensor == 1:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Underrange'
-            elif sensor==2:
+                labels[num] = labels_begin[num]+' - Underrange'
+            elif sensor == 2:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Overrange'
-            elif sensor==3:
+                labels[num] = labels_begin[num]+' - Overrange'
+            elif sensor == 3:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Error'
-            elif sensor==4:
+                labels[num] = labels_begin[num]+' - Error'
+            elif sensor == 4:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Off'
-            elif sensor==5:
+                labels[num] = labels_begin[num]+' - Off'
+            elif sensor == 5:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Not found'
-            elif sensor==6:
+                labels[num] = labels_begin[num]+' - Not found'
+            elif sensor == 6:
                 pressures[num].append(1e10)
-                labels[num]=labels_begin[num]+' - Identification error'
+                labels[num] = labels_begin[num]+' - Identification error'
         with open("pressure-log.txt", "a") as logfile:
             logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[0][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
         
@@ -277,7 +281,7 @@ if __name__ == '__main__':
             sensl['sen1{0}'.format(j)].set_label(labels[j])
             sensr['sen2{0}'.format(j)].set_xdata(times)
             sensr['sen2{0}'.format(j)].set_ydata(pressures[j])
-        ax.legend(loc='best')
+        ax.legend(loc = 'best')
         ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
 		#ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
         plt.pause(0.05)
