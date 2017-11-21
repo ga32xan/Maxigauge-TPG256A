@@ -96,9 +96,10 @@ def read_port(ser):
 
 def test_connection(ser):
     ''' Unimplemented testing routine to test the serial connection object passed as ser '''
-    send_command(ser,'PR%i\r\n'%(j+1))  #request Channel 1-6
-    send_command(ser,'\x05')            #enquire data
-    read_port(ser)
+    for j in range(6):
+        send_command(ser,'PR%i\r\n'%(j+1))  #request Channel 1-6
+        send_command(ser,'\x05')            #enquire data
+        read_port(ser)
     
 def get_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
