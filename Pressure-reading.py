@@ -15,15 +15,30 @@ import datetime as dt
 import matplotlib.dates as mdate
 import numpy as np
 import os
+import argparse #for the argument parsing stuff and -h explanation
+
+''' Create helper when script is used wrong! '''
+''' Parses arguments given in command line '''
+parser = argparse.ArgumentParser(
+            description = 'Reads pressures from Pfeiffer Maxigauge TPG256A and shows interactive graph if wanted',\
+            epilog = 'For detailed documentation see source code or visit http://github.com/ga32xan/Maxigauge-TPG256A'\
+            )
+parser.add_argument('--log',\
+                    help = 'Minimum numeric loglevel/serverity 1: Debug, 2: Info, 3: Warning, 4: Error, 5: Critical.\
+                    This switch does not affect the pressure log, wchich is always written in the same format.',\
+                    type = int\
+                   )
+parser.add_argument('--v',\
+                    help = 'Chosse verbosity level to print to console, add more v\'s for more verbosity',\
+                    type = count\
+                   )
+arguments = parser.parse_args()
 
 def read_gauges(ser):
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
     '''  There is one list for status[CH] called stat and one for pressure[CH] called press returned'''
     ser.flushInput()
 
-    #send_command('ETX\r\n')
-    #print(read_port())
-    #send_command('\x05\r\n')
     press = []
     stat = []
     for j in range(6): 			# for each channel
@@ -99,6 +114,8 @@ def test_connection(ser):
     send_command(ser,'PR%i\r\n'%(j+1))  #request Channel 1-6
     send_command(ser,'\x05')            #enquire data
     read_port(ser)
+    if True:
+        ''' !Some Check routine missing! '''
     
 def get_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
@@ -164,12 +181,18 @@ if __name__ == '__main__':
     ''' Messy routine that updates the data, plot it and updates the logfile '''
     ''' Every time the program is started and writes to the same logfile a line of '#############' is added '''
     ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
-    debug = False       # First debug level   
-    debug2 = False      # extensive debugging
-    if debug2: debug = True #make sure both are enabled if debug2 is enabled
+    if arguments.log == 0: debug = False          # First debug level   
+    if arguments.log == 1: debug = True           # First debug level   
+    if arguments.log > 1: 
+        debug = True           # First debug level   
+        debug2 = True          # extensive debugging+
+    ''' Boolean to indicate if auto-updating matplotlib-graph is wanted gives Priviledge Error if not executed within '''
+    ''' Set to False if script is exucuted from command line '''
+    ''' Set to true if run in IDE (tested: Anaconda) '''
+    plot = False        
     #Ask for COM-port    
     #com_port = int(input('Enter COM-Port-Number (1-10)'))   #input COM port
-    com_port=5
+    com_port = 5
     ser = init_serial(com_port) #initialize at this port
     
     pressures = [[],[],[],[],[],[]] #six membered list of lists that holds pressure data
@@ -197,30 +220,29 @@ if __name__ == '__main__':
         ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
         if status == 0:
             pressures[sensor_num].append(stpre[sensor_num])
-            """
-            if pressures[sensor_num][-1] > 1e-1:
-                labels[sensor_num] = labels_begin[sensor_num]+r' $\rightarrow$ %.2f mbar'%pressures[sensor_num][-1]
-            elif pressures[sensor_num][-1] <= 1e-1:
-                labels[sensor_num] = labels_begin[sensor_num]+r' $\leftarrow$ %.2f mbar'%pressures[sensor_num][-1]
-            """
+            if plot:
+                if pressures[sensor_num][-1] > 1e-1:
+                    labels[sensor_num] = labels_begin[sensor_num]+r' $\rightarrow$ %.2f mbar'%pressures[sensor_num][-1]
+                elif pressures[sensor_num][-1] <= 1e-1:
+                    labels[sensor_num] = labels_begin[sensor_num]+r' $\leftarrow$ %.2f mbar'%pressures[sensor_num][-1]
         elif status == 1:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Underrange'
+            if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Underrange'
         elif status == 2:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Overrange'
+            if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Overrange'
         elif status == 3:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Error'
+            if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Error'
         elif status == 4:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Off'
+            if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Off'
         elif status == 5:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Not found'
+            if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Not found'
         elif status == 6:
             pressures[sensor_num].append(1e10)
-            #labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
+            if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
     
     ''' Prepares and writes logfile '''  
     logfile_name = 'pressure-log.txt'
@@ -237,37 +259,36 @@ if __name__ == '__main__':
         logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
     
     ''' Prepare plot '''
-    """
-    fig = plt.figure(figsize=(10,6),dpi=100)
-    ax = fig.add_subplot(111)
-    plt.ion()                      #autoupdate plot
-    plt.yscale('log')
-    
-    sens = {} 
-    col = ['b','r','g','K','c','y'] #colors
+    if plot:
+        fig = plt.figure(figsize=(10,6),dpi=100)
+        ax = fig.add_subplot(111)
+        plt.ion()                      #autoupdate plot
+        plt.yscale('log')
 
-    #For each sensors, choose a different color and plot them all on one axis
-    for j in range(6):
-        sens['sen{0}'.format(j)], = ax.plot(times, pressures[j], '.', ls = '-', color = col[j], label=labels[j])
-    #configure left axis
-    ax.set_ylim(1e-12,1e-4)
-    ax.set_xlabel('Time')
-    ax.set_ylabel('Pressure [mbar]')
-    
-    ax.legend()
-    plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
-    plt.gcf().autofmt_xdate()
-    
-    ax2 = ax.twinx()
-    #Plot every sensor with a pressure > 1e-1 on the second axis
-    for j in range(6):
-        if pressures[j][-1] > 1e-1:
-            sens['sen{0}'.format(j)], = ax2.plot(times, pressures[j], '.', ls = '-', color = col[j])
-    #configure right axis            
-    ax2.set_ylim(1e-1,1e3)
-    ax2.set_yscale('log')
-    ax2.set_ylabel('Pressure [mbar]')
-    """
+        sens = {} 
+        col = ['b','r','g','K','c','y'] #colors
+
+        #For each sensors, choose a different color and plot them all on one axis
+        for j in range(6):
+            sens['sen{0}'.format(j)], = ax.plot(times, pressures[j], '.', ls = '-', color = col[j], label=labels[j])
+        #configure left axis
+        ax.set_ylim(1e-12,1e-4)
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Pressure [mbar]')
+
+        ax.legend()
+        plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
+        plt.gcf().autofmt_xdate()
+
+        ax2 = ax.twinx()
+        #Plot every sensor with a pressure > 1e-1 on the second axis
+        for j in range(6):
+            if pressures[j][-1] > 1e-1:
+                sens['sen{0}'.format(j)], = ax2.plot(times, pressures[j], '.', ls = '-', color = col[j])
+        #configure right axis            
+        ax2.set_ylim(1e-1,1e3)
+        ax2.set_yscale('log')
+        ax2.set_ylabel('Pressure [mbar]')
     while True:
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely '''
@@ -285,16 +306,16 @@ if __name__ == '__main__':
         times.append(mdate.datestr2num(datenow))
         
         ''' To update the legend when a sensor is switched on/off we have to check every time we read a value '''
+        ''' Updates Values in pressure lists '''
         #ax.legend_.remove()
         for num,sensor in enumerate(status):
             if sensor == 0:
                 pressures[num].append(pre[num])
-                """
-                if pressures[num][-1] > 1e-1:
-                    labels[num] = labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
-                elif pressures[num][-1] <= 1e-1:
-                    labels[num] = labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
-                """
+                if plot:
+                    if pressures[num][-1] > 1e-1:
+                        labels[num] = labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
+                    elif pressures[num][-1] <= 1e-1:
+                        labels[num] = labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
             elif sensor == 1:
                 pressures[num].append(1e10)
                 #labels[num] = labels_begin[num]+' - Underrange'
@@ -319,16 +340,15 @@ if __name__ == '__main__':
             logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
         
         ''' Update plot '''
-        """
-        for j in range(6):
-            sens['sen{0}'.format(j)].set_xdata(times)
-            sens['sen{0}'.format(j)].set_ydata(pressures[j])
-            sens['sen{0}'.format(j)].set_label(labels[j])
-        #Set new 'best' place for legand
-        ax.legend(loc = 'best')
-        #dynamically updating axis range, showing all data
-        ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
-        #asis range: 12h
-        #ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
-        """
+        if plot:
+            for j in range(6):
+                sens['sen{0}'.format(j)].set_xdata(times)
+                sens['sen{0}'.format(j)].set_ydata(pressures[j])
+                sens['sen{0}'.format(j)].set_label(labels[j])
+            #Set new 'best' place for legand
+            ax.legend(loc = 'best')
+            #dynamically updating axis range, showing all data
+            ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
+            #asis range: 12h
+            #ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
     plt.pause(1)
