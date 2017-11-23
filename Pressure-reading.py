@@ -33,21 +33,21 @@ parser.add_argument('--loglevel',\
                    )
 
 parser.add_argument('--programlogfile',\
-                    help = 'What filename shoutld the pressure log have? Always written to the directory where script is located\
+                    help = 'What filename should the pressure log have? Always written to the directory where script is located\
                     Defaults to control.log',\
                     type = str,\
                     default = 'control.log'\
                    )
 
 parser.add_argument('--pressurelogfile',\
-                    help = 'What filename shoutd the pressure log have? Always written to the directory where script is located\
-                    Defaults to pressure.log',\',
+                    help = 'What filename should the pressure log have? Always written to the directory where script is located\
+                    Defaults to pressure.log',
                     type = str,\
                     default = 'pressure.log'\
                    )
 
 parser.add_argument('--plot',\
-                    help = 'Plot graph? Do not use outside spyder, yet!\
+                    help = 'Plot graph? Do not use outside spyder, yet!'\
                     Defaults to False.',
                     type = bool,\
                     action = 'store_true',\
