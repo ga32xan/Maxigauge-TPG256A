@@ -15,25 +15,75 @@ import datetime as dt
 import matplotlib.dates as mdate
 import numpy as np
 import os
-import argparse #for the argument parsing stuff and -h explanation
-
+import argparse # for the argument parsing stuff and -h explanation
+import logging	# for logging puposes
+##########################################################################################################
 ''' Create helper when script is used wrong! '''
 ''' Parses arguments given in command line '''
 parser = argparse.ArgumentParser(
             description = 'Reads pressures from Pfeiffer Maxigauge TPG256A and shows interactive graph if wanted',\
             epilog = 'For detailed documentation see source code or visit http://github.com/ga32xan/Maxigauge-TPG256A'\
             )
-parser.add_argument('--log',\
-                    help = 'Minimum numeric loglevel/serverity 1: Debug, 2: Info, 3: Warning, 4: Error, 5: Critical.\
-                    This switch does not affect the pressure log, wchich is always written in the same format.',\
-                    type = int\
+parser.add_argument('--loglevel',\
+                    help = 'Minimum numeric loglevel/serverity: Debug, Info, Warning, Error, Critical.\
+                    This switch does not affect the pressure log, wchich is always written in the same format.\
+                    Defaults to Warning.',\
+                    type = str,\
+                    default = 'Warning'\
                    )
-parser.add_argument('--v',\
-                    help = 'Chosse verbosity level to print to console, add more v\'s for more verbosity',\
-                    type = count\
+
+parser.add_argument('--programlogfile',\
+                    help = 'What filename shoutld the pressure log have? Always written to the directory where script is located\
+                    Defaults to control.log',\
+                    type = str,\
+                    default = 'control.log'\
                    )
+
+parser.add_argument('--pressurelogfile',\
+                    help = 'What filename shoutd the pressure log have? Always written to the directory where script is located\
+                    Defaults to pressure.log',\',
+                    type = str,\
+                    default = 'pressure.log'\
+                   )
+
+parser.add_argument('--plot',\
+                    help = 'Plot graph? Do not use outside spyder, yet!\
+                    Defaults to False.',
+                    type = bool,\
+                    action = 'store_true',\
+                    default = False\
+                   )
+
+parser.add_argument('--comport',\
+                    help = 'What port to use? Defaults to 5.',
+                    type = int,\
+                    default = 5\
+                   )
+
 arguments = parser.parse_args()
 
+''' Takes argument loglevel and programlogfile from the argparser and passes it to the logging facility '''
+loglevel = arguments.loglevel
+numeric_loglevel = getattr(logging, loglevel.upper(), None)
+if not isinstance(numeric_loglevel, int)
+    raise ValueError('Invalid log level: %s' % loglevel)
+
+programlogfile_name = os.getcwd() + arguments.programlogfile
+logging.basicConfig(filename = programlogfile_name,\
+                    format = /'(%asctime)s %(message)s',\
+                    datefmt = '%d-%m-%Y %H:%M:%S',\
+                    filemode = 'w',\
+                    level = numeric_loglevel\
+                   )
+''' Takes argument pressurelogfile from the argparser '''
+pressurelogfile_name = os.getcwd() + arguments.pressurelogfile
+
+''' Takes argument comport from the argparser '''
+com_port = arguments.comport
+
+''' Takes argument plot from the argparser '''
+plot = arguments.plot
+##########################################################################################################
 def read_gauges(ser):
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
     '''  There is one list for status[CH] called stat and one for pressure[CH] called press returned'''
@@ -61,7 +111,7 @@ def read_gauges(ser):
         press.append(float(string_pres))    	#append float of pressure to press-list
         stat.append(int(string_sta))        	#append int(status) to status list
     return(stat,press)
-    
+##########################################################################################################    
 def send_command(ser,command):
     ''' Takes ascii string 'command' and converts it to bytes to send it over serial connection '''
     if debug2: print('########################')
@@ -75,7 +125,7 @@ def send_command(ser,command):
     time.sleep(0.05)
     if debug2: print('########################')
     if debug2: print('Send Command: ' + str(input))
-    
+##########################################################################################################    
 def read_port(ser):
     ''' Reads serial port, gets bytes over wire, decodes them with utf-8'''
     ''' and returns string with received message'''
@@ -108,7 +158,7 @@ def read_port(ser):
         else:
             input_buffersize = input_buffersize_old
     return out
-
+##########################################################################################################
 def test_connection(ser):
     ''' Unimplemented testing routine to test the serial connection object passed as ser '''
     send_command(ser,'PR%i\r\n'%(j+1))  #request Channel 1-6
@@ -116,7 +166,7 @@ def test_connection(ser):
     read_port(ser)
     if True:
         ''' !Some Check routine missing! '''
-    
+##########################################################################################################    
 def get_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
     print('############ Information about connection: ############')
@@ -143,7 +193,7 @@ def get_info(ser):
     print('\t \t \t \t... CTS line: ' + str(ser.rtscts))
     print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
     print('RS485 settings: ' +  str(ser.rs485_mode))
-
+##########################################################################################################
 def init_serial(com_port = 5):
     ''' Initializes serial connection, defaults to COM5 '''
     try:
@@ -162,7 +212,7 @@ def init_serial(com_port = 5):
     except IndexError as err:
         print('Failed opening serial port at port' + str(ser.port))
         print('Make sure you are on the right COM port and try reloading the console')
-
+##########################################################################################################
 def to_bytes(seq):
     """convert a sequence of int/str to a byte sequence and returns it"""
     if isinstance(seq, bytes):
@@ -176,7 +226,7 @@ def to_bytes(seq):
         for item in seq:
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
-    
+########################################## Main routine ################################################    
 if __name__ == '__main__':
     ''' Messy routine that updates the data, plot it and updates the logfile '''
     ''' Every time the program is started and writes to the same logfile a line of '#############' is added '''
@@ -189,18 +239,12 @@ if __name__ == '__main__':
     ''' Boolean to indicate if auto-updating matplotlib-graph is wanted gives Priviledge Error if not executed within '''
     ''' Set to False if script is exucuted from command line '''
     ''' Set to true if run in IDE (tested: Anaconda) '''
-    plot = False        
-    #Ask for COM-port    
-    #com_port = int(input('Enter COM-Port-Number (1-10)'))   #input COM port
-    com_port = 5
+
     ser = init_serial(com_port) #initialize at this port
     
     pressures = [[],[],[],[],[],[]] #six membered list of lists that holds pressure data
-    ''' [
-    [CH1p1, CH1p2, ...],
-    [CH2p1, CH2p2, ...],
-    [CH3p1, CH3p2, ...],
-    ...
+    ''' 
+    [[CH1p1, CH1p2, ..., CH1pn], [CH2p1, CH2p2, ..., CH2pn], ... , [CH6p1, CH6p2, ..., CH6pn]]
     '''
     times = []  #  list when pressures are recorded (approximately)
     
@@ -245,16 +289,15 @@ if __name__ == '__main__':
             if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
     
     ''' Prepares and writes logfile '''  
-    logfile_name = 'pressure-log.txt'
     date_fmt = '%d-%m-%Y %H:%M:%S'
     datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
     times.append(mdate.datestr2num(datenow))            #and append it to times list
     #write header if logfile was never used ...
     header = 'Time\t\t\t\tSTM [mbar]\t\tRough [mbar]\t\tPrep [mbar]\t\tSensor 4 [mbar]\t\t\tSensor 5 [mbar]\t\t\tSensor 6 [mbar]\n'
     #... if logfile was already used add seperator 
-    if os.path.isfile(logfile_name):  
-        header = '##########################################################################\n'
-    with open(logfile_name, "a") as logfile:
+    if os.path.isfile(pressurelogfile_name):  
+        header = '##################### Program restarted ###################################\n'
+    with open(pressurelogfile_name, "a") as logfile:
         logfile.write(header)
         logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
     
@@ -336,7 +379,7 @@ if __name__ == '__main__':
                 #labels[num] = labels_begin[num]+' - Identification error'
         
         ''' Write to log '''
-        with open(logfile_name, "a") as logfile:
+        with open(pressurelogfile_name, "a") as logfile:
             logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
         
         ''' Update plot '''
