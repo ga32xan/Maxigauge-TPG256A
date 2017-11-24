@@ -255,6 +255,7 @@ def to_bytes(seq):
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
         logging.debug('Byte-conversion for ' + str(seq) + ' done')
+###############################################################################
 def update_terminal(time,pressures):
     #os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
     print(time + ': \t ... running ...')
@@ -265,6 +266,7 @@ def update_terminal(time,pressures):
     print('#     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e  #' \
     %(pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
     print('#################################################################################################')
+###############################################################################
 def get_labels(ser):
     send_command(ser, 'CID\r\n')  # request channel
     ''' Check for ACK '''
@@ -277,7 +279,7 @@ def get_labels(ser):
     logging.debug(labels_raw[3])
     logging.debug(labels_raw[4])
     logging.debug(labels_raw[5][:-2])  # slices  ending \r\n'
-    labels = [labels_raw[0][3:],labels_raw[1],labels_raw[2],labels_raw[3],labels_raw[4],labels_raw[5],labels_raw[5][:-2]]
+    labels = [labels_raw[0][3:],labels_raw[1],labels_raw[2],labels_raw[3],labels_raw[4],labels_raw[5][:-2]]
     logging.info('Returning Labels: ' + str(labels) + 'typeof' + str(type(labels)))
     return labels
 ########################################## Main routine ########################
@@ -288,6 +290,7 @@ if __name__ == '__main__':
     print('... starting up ...')
     logging.debug('##########main()##############')
     logging.debug(arguments)
+    logging.info('... starting up ...')
     date_fmt = '%d-%m-%Y %H:%M:%S'
     datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
     pressures = [[],[],[],[],[],[]] #six membered list of lists that holds pressure data
@@ -311,10 +314,10 @@ if __name__ == '__main__':
     
     for sensor_num,status in enumerate(stat):
         logging.debug('##########updating pressures inside main()##############')
-        logging.debug('Sensor: ' + str(sensor_num))
+        logging.info('Sensor: ' + str(sensor_num))
         ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
         if status == 0:
-            logging.debug('Channel OK')
+            logging.info('Channel OK')
             pressures[sensor_num].append(stpre[sensor_num])
             if plot:
                 if pressures[sensor_num][-1] > 1e-1:
@@ -334,11 +337,11 @@ if __name__ == '__main__':
             pressures[sensor_num].append(1e10)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Error'
         elif status == 4:
-            logging.debug('Channel Off')
+            logging.info('Channel Off')
             pressures[sensor_num].append(1e10)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Off'
         elif status == 5:
-            logging.debug('Channel Not found')
+            logging.info('Channel Not found')
             pressures[sensor_num].append(1e10)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Not found'
         elif status == 6:
@@ -348,7 +351,9 @@ if __name__ == '__main__':
     ''' Prepares and writes logfile '''  
     times.append(mdate.datestr2num(datenow))            #and append it to times list
     #write header if logfile was never used ...
-    header = 'Time\t\t\t\tSTM [mbar]\t\tRough [mbar]\t\tPrep [mbar]\t\tSensor 4 [mbar]\t\t\tSensor 5 [mbar]\t\t\tSensor 6 [mbar]\n'
+    header = 'Time\t\t\t\t\t'\
+            + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
+            + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n'
     #... if logfile was already used add seperator 
     if os.path.isfile(pressurelogfile_name):  
         header = '##################### Program restarted ###################################\n'
@@ -389,6 +394,8 @@ if __name__ == '__main__':
         ax2.set_ylim(1e-1,1e3)
         ax2.set_yscale('log')
         ax2.set_ylabel('Pressure [mbar]')
+    
+    logging.info('Start Looping')
     while True:
         logging.debug('Loop-Top')
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
