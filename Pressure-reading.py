@@ -257,7 +257,7 @@ def to_bytes(seq):
         logging.debug('Byte-conversion for ' + str(seq) + ' done')
 ###############################################################################
 def update_terminal(time,pressures):
-    #os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
+    os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
     print(time + ': \t ... running ...')
     print('Program Logging goes to : ' + programlogfile_name)
     print('Pressure Logging goes to : ' + pressurelogfile_name)
