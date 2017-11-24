@@ -256,13 +256,13 @@ def to_bytes(seq):
         return bytes(b)
         logging.debug('Byte-conversion for ' + str(seq) + ' done')
 ###############################################################################
-def update_terminal(time,pressures):
+def update_terminal(time,labels,pressures):
     os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
     print(time + ': \t ... running ...')
     print('Program Logging goes to : ' + programlogfile_name)
     print('Pressure Logging goes to : ' + pressurelogfile_name)
     print('#################################################################################################')
-    print('#\t CH1 \t|\t CH2 \t|\tCH3 \t|\t CH4 \t|\t CH5 \t|\t CH6 \t#')
+    print('#\t' + labels[0] + '\t|\t'  + labels[1] + ' \t|\t'  + labels[2] + ' \t|\t'  + labels[3] + ' \t|\t'  + labels[4] + ' \t|\t'  + labels[5] + ' \t#')
     print('#     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e  #' \
     %(pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
     print('#################################################################################################')
@@ -400,7 +400,7 @@ if __name__ == '__main__':
         logging.debug('Loop-Top')
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely '''
-        update_terminal(datenow,pressures)
+        update_terminal(datenow,labels,pressures)
         ''' Continuously read data '''
         if ser.is_open:
             status,pre = read_gauges(ser)
