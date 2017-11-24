@@ -69,12 +69,15 @@ arguments = parser.parse_args()
 
 ''' Takes argument loglevel and programlogfile from the argparser \
 and passes it to the logging facility '''
-loglevel = arguments.loglevel
-numeric_loglevel = getattr(logging, loglevel.upper(), None)
+loglevel = arguments.loglevel   # is str like debug,info, DeBUg or something similar
+# compares to available loglevels and transforms into number
+numeric_loglevel = getattr(logging, loglevel.upper(), None) 
 if not isinstance(numeric_loglevel, int):
     raise ValueError('Invalid log level: %s' % loglevel)
 
-programlogfile_name = os.getcwd() + arguments.programlogfile
+programlogfile_name = os.getcwd() + '\\' + arguments.programlogfile
+print('Program Logging goes to : ' + programlogfile_name)
+
 logging.basicConfig(filename = programlogfile_name,\
                     format = '(%asctime)s %(message)s',\
                     datefmt = '%d-%m-%Y %H:%M:%S',\
@@ -82,13 +85,25 @@ logging.basicConfig(filename = programlogfile_name,\
                     level = numeric_loglevel\
                    )
 ''' Takes argument pressurelogfile from the argparser '''
-pressurelogfile_name = os.getcwd() + arguments.pressurelogfile
+pressurelogfile_name = os.getcwd() + '\\' + arguments.pressurelogfile
+print('Pressure Logging goes to : ' + pressurelogfile_name)
 
 ''' Takes argument comport from the argparser '''
 com_port = arguments.comport
-
 ''' Takes argument plot from the argparser '''
+''' Boolean to indicate if auto-updating matplotlib-graph is wanted gives Priviledge Error if not executed within '''
+''' Set to False if script is exucuted from command line '''
+''' Set to true if run in IDE (tested: Anaconda) '''
 plot = arguments.plot
+
+
+logging.info('Using COM-Port : ' + str(com_port))
+logging.info('Pressure Logging goes to : ' + pressurelogfile_name)
+logging.info('Program Logging goes to : ' + programlogfile_name)
+logging.info('Program Debug level is : ' + arguments.loglevel + '(' + str(numeric_loglevel) + ')')
+logging.info('Do i plot something? : ' + str(plot))
+
+
 ################################################################################
 def read_gauges(ser):
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
@@ -111,7 +126,7 @@ def read_gauges(ser):
         '''
         logging.debug('##########splitting received pressure string##############')
         string=read_port(ser).split(',') 		# splits read string into string[-1],string[0]
-        loggin.debug(string)
+        logging.debug(string)
         string_pres=str(string[1])       	#pressure value converted to string
         logging.debug('Read pressure :' + string_pres)
         string_sta=int(string[0][-1])    	#status value converted to int
@@ -240,30 +255,50 @@ def to_bytes(seq):
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
         logging.debug('Byte-conversion for ' + str(seq) + ' done')
+def update_terminal(time,pressures):
+    #os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
+    print(time + ': \t ... running ...')
+    print('Program Logging goes to : ' + programlogfile_name)
+    print('Pressure Logging goes to : ' + pressurelogfile_name)
+    print('#################################################################################################')
+    print('#\t CH1 \t|\t CH2 \t|\tCH3 \t|\t CH4 \t|\t CH5 \t|\t CH6 \t#')
+    print('#     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e  #' \
+    %(pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
+    print('#################################################################################################')
+def get_labels(ser):
+    send_command(ser, 'CID\r\n')  # request channel
+    ''' Check for ACK '''
+    send_command(ser, '\x05')     # enquire data
+    labels_raw = read_port(ser).split(',')
+    logging.debug('Receiving channel names:')
+    logging.debug(labels_raw[0][3:])  # slices the \x06\r\n in beginning of MSG
+    logging.debug(labels_raw[1])
+    logging.debug(labels_raw[2])
+    logging.debug(labels_raw[3])
+    logging.debug(labels_raw[4])
+    logging.debug(labels_raw[5][:-2])  # slices  ending \r\n'
+    labels = [labels_raw[0][3:],labels_raw[1],labels_raw[2],labels_raw[3],labels_raw[4],labels_raw[5],labels_raw[5][:-2]]
+    logging.info('Returning Labels: ' + str(labels) + 'typeof' + str(type(labels)))
+    return labels
 ########################################## Main routine ########################
 if __name__ == '__main__':
     ''' Messy routine that updates the data, plot it and updates the logfile '''
     ''' Every time the program is started and writes to the same logfile a line of # is added '''
     ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
+    print('... starting up ...')
     logging.debug('##########main()##############')
     logging.debug(arguments)
-    logging.debug('First Bebug-msg')
-    logging.info('First info-msg')
-    logging.warning('First warning-msg')
-    logging.critical('First critical-msg')
-    ''' Boolean to indicate if auto-updating matplotlib-graph is wanted gives Priviledge Error if not executed within '''
-    ''' Set to False if script is exucuted from command line '''
-    ''' Set to true if run in IDE (tested: Anaconda) '''
-
-    ser = init_serial(com_port) #initialize at this port
-    
+    date_fmt = '%d-%m-%Y %H:%M:%S'
+    datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
     pressures = [[],[],[],[],[],[]] #six membered list of lists that holds pressure data
     ''' 
     [[CH1p1, CH1p2, ..., CH1pn], [CH2p1, CH2p2, ..., CH2pn], ... , [CH6p1, CH6p2, ..., CH6pn]]
     '''
-    times = []  #  list when pressures are recorded (approximately)
+    ser = init_serial(com_port) #initialize at this port
     
-    labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
+    times = []  #  list when pressures are recorded (approximately)
+    labels = get_labels(ser)
+    #labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
      
     ''' read gauges, pass serial connection to them, returns (stat,press) '''
     ''' stat = [(int)] = [0,,0,5,5,5] & press = [float] = [1e-1,1e-10,1e-10,2e-2,2e-2,2e-2] '''
@@ -273,8 +308,7 @@ if __name__ == '__main__':
     ''' The following creates the labels for the plot '''
     ''' Sensors with pressure > 1e-1 are appended with a rightarrow to indicate the axis they will be plotted '''
     ''' Sensors with pressures < 1e-1 are plotted wit a left-arrow on the left axis '''
-    labels = ['','','','','','']
-    labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
+    
     for sensor_num,status in enumerate(stat):
         logging.debug('##########updating pressures inside main()##############')
         logging.debug('Sensor: ' + str(sensor_num))
@@ -312,8 +346,6 @@ if __name__ == '__main__':
             pressures[sensor_num].append(1e10)
             if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
     ''' Prepares and writes logfile '''  
-    date_fmt = '%d-%m-%Y %H:%M:%S'
-    datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
     times.append(mdate.datestr2num(datenow))            #and append it to times list
     #write header if logfile was never used ...
     header = 'Time\t\t\t\tSTM [mbar]\t\tRough [mbar]\t\tPrep [mbar]\t\tSensor 4 [mbar]\t\t\tSensor 5 [mbar]\t\t\tSensor 6 [mbar]\n'
@@ -324,6 +356,7 @@ if __name__ == '__main__':
         logfile.write(header)
         logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"\
 		%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))    
+    
     ''' Prepare plot '''
     if plot:
         logging.debug('Preparing plot')
@@ -360,7 +393,7 @@ if __name__ == '__main__':
         logging.debug('Loop-Top')
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely '''
-        
+        update_terminal(datenow,pressures)
         ''' Continuously read data '''
         if ser.is_open:
             status,pre = read_gauges(ser)
