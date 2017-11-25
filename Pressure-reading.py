@@ -79,7 +79,7 @@ programlogfile_name = os.getcwd() + '\\' + arguments.programlogfile
 print('Program Logging goes to : ' + programlogfile_name)
 
 logging.basicConfig(filename = programlogfile_name,\
-                    format = '(%asctime)s %(message)s',\
+                    format = '%(asctime)s %(message)s',\
                     datefmt = '%d-%m-%Y %H:%M:%S',\
                     filemode = 'w',\
                     level = numeric_loglevel\
