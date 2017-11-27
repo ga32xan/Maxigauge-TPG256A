@@ -18,6 +18,8 @@ import os
 import argparse # for the argument parsing stuff and -h explanation
 import logging	# for logging puposes
 ################################################################################
+date_fmt = '%d-%m-%Y %H:%M:%S'
+datenow = dt.datetime.now().strftime(date_fmt)
 ''' Create helper when script is used wrong! '''
 ''' Parses arguments given in command line '''
 parser = argparse.ArgumentParser(
@@ -75,17 +77,27 @@ numeric_loglevel = getattr(logging, loglevel.upper(), None)
 if not isinstance(numeric_loglevel, int):
     raise ValueError('Invalid log level: %s' % loglevel)
 
-programlogfile_name = os.getcwd() + '\\' + arguments.programlogfile
+
+suffix = arguments.programlogfile.split('.')[0]    #filename
+ending = arguments.programlogfile.split('.')[1]    #file type
+prefix = '%s - '%datenow.replace(':','-')
+
+programlogfile_name = os.getcwd() + '\\' + prefix + suffix + '.' + ending
 print('Program Logging goes to : ' + programlogfile_name)
 
 logging.basicConfig(filename = programlogfile_name,\
                     format = '%(asctime)s %(message)s',\
                     datefmt = '%d-%m-%Y %H:%M:%S',\
-                    filemode = 'w',\
+                    filemode = 'a',\
                     level = numeric_loglevel\
                    )
 ''' Takes argument pressurelogfile from the argparser '''
-pressurelogfile_name = os.getcwd() + '\\' + arguments.pressurelogfile
+''' Gets and splits command line argument into prefix.ending and returns appended date '''
+suffix = arguments.pressurelogfile.split('.')[0]    #filename
+ending = arguments.pressurelogfile.split('.')[1]    #file type
+prefix = '%s - '%datenow.replace(':','-')
+pressurelogfile_name = os.getcwd() + '\\' + prefix + suffix + '.' + ending
+
 print('Pressure Logging goes to : ' + pressurelogfile_name)
 
 ''' Takes argument comport from the argparser '''
@@ -264,7 +276,7 @@ def update_terminal(time,labels,pressures):
     print('#################################################################################################')
     print('#\t' + labels[0] + '\t|\t'  + labels[1] + ' \t|\t'  + labels[2] + ' \t|\t'  + labels[3] + ' \t|\t'  + labels[4] + ' \t|\t'  + labels[5] + ' \t#')
     print('#     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e  #' \
-    %(pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))
+    %(pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
     print('#################################################################################################')
 ###############################################################################
 def get_labels(ser):
@@ -301,8 +313,7 @@ if __name__ == '__main__':
     
     times = []  #  list when pressures are recorded (approximately)
     labels = get_labels(ser)
-    #labels_begin = [r'STM',r'Rough',r'Prep',r'Sensor 4',r'Sensor 5',r'Sensor 6']
-     
+         
     ''' read gauges, pass serial connection to them, returns (stat,press) '''
     ''' stat = [(int)] = [0,,0,5,5,5] & press = [float] = [1e-1,1e-10,1e-10,2e-2,2e-2,2e-2] '''
     ''' these are to be processed before written to log file '''
@@ -400,7 +411,7 @@ if __name__ == '__main__':
         logging.debug('Loop-Top')
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely '''
-        update_terminal(datenow,labels,pressures)
+        
         ''' Continuously read data '''
         if ser.is_open:
             status,pre = read_gauges(ser)
@@ -409,6 +420,15 @@ if __name__ == '__main__':
             ser.open()
             status,pre = read_gauges(ser)
             ser.close()
+        
+        ''' Keep track of changing labels - Crashes program when labels are changed!'''
+        #labels_old = labels
+        #if not labels_old == labels:
+        #    with open(pressurelogfile_name, "a") as logfile:
+        #        logfile.write('#labelschanged')
+        #        logfile.write('Time\t\t\t\t\t'\
+        #        + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
+        #        + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n')
 
         datenow = dt.datetime.now().strftime(date_fmt)
         times.append(mdate.datestr2num(datenow))
@@ -445,8 +465,9 @@ if __name__ == '__main__':
         
         ''' Write to log '''
         with open(pressurelogfile_name, "a") as logfile:
-            logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
-        
+            logfile.write('%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n'%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
+        ''' Update console output '''
+        update_terminal(datenow,labels,pressures)
         ''' Update plot '''
         if plot:
             for j in range(6):
