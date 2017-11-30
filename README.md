@@ -3,13 +3,13 @@
 * Creates command line output for the six channels wit indicated pressure
 
 ## Changed usage:
-* Start pressure recording with Pressure-reading.py
-* Create a united logfile from the logfiles you want to plot
-* Plot logfile with Plot-pressure.py
+* Start pressure recording with maxigauge-TPG256A.py 
+* Create a united logfile from the logfiles you want to plot with merge-logfiles.py
+* Plot logfile with plot-logfiles.py
 
 ### Optional but not production:
-* Real-time plot data in a seperate window
-* Dynamically update pressure gauges for their reported status
+* Real-time plot data in a seperate window with calling maxigauge-TPG256A.py with the -p flag
+* Dynamically update pressure gauges for their reported status on the command line
 
 #### (record/display):
 * prints helpline with command line options and their default values
