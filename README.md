@@ -12,6 +12,6 @@
 * Dynamically update pressure gauges for their reported status
 
 #### Command line usage:
-'''
+```
 python read_pressure.py -h #plots helpline with command line options and their default value
-'''
+```
