@@ -62,9 +62,9 @@ parser.add_argument('--plot', '-p',\
                    )
 
 parser.add_argument('--comport', '-c',\
-                    help = 'What port to use? Defaults to 5.',
+                    help = 'What port to use? Defaults to 8.',
                     type = int,\
-                    default = 5\
+                    default = 8\
                    )
 
 arguments = parser.parse_args()
@@ -229,7 +229,7 @@ def get_info(ser):
     print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
     print('RS485 settings: ' +  str(ser.rs485_mode))
 ################################################################################
-def init_serial(com_port = 5):
+def init_serial(com_port):
     ''' Initializes serial connection, defaults to COM5 '''
     logging.debug('##########init_serial##############')
     try:
