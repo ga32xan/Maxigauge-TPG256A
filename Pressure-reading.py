@@ -270,13 +270,22 @@ def to_bytes(seq):
 ###############################################################################
 def update_terminal(time,labels,pressures):
     os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
+    pressures_show=[]
+    pressures_last=[]
+    for j in range(6):
+        pressures_last.append(pressures[j][-1])
+    for n,i in enumerate(pressures_last):
+        if i==1e10:
+            pressures_show.append('NAN')
+        else:
+            pressures_show.append(str(i))
     print(time + ': \t ... running ...')
     print('Program Logging goes to : ' + programlogfile_name)
     print('Pressure Logging goes to : ' + pressurelogfile_name)
     print('#################################################################################################')
     print('#\t' + labels[0] + '\t|\t'  + labels[1] + ' \t|\t'  + labels[2] + ' \t|\t'  + labels[3] + ' \t|\t'  + labels[4] + ' \t|\t'  + labels[5] + ' \t#')
-    print('#     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e\t|     %.2e  #' \
-    %(pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
+    print('#     %s\t|     %s\t|     %s\t|     %s\t|     %s\t|     %s  #' \
+    %(pressures_show[0],pressures_show[1],pressures_show[2],pressures_show[3],pressures_show[4],pressures_show[5]))
     print('#################################################################################################')
 ###############################################################################
 def get_labels(ser):
@@ -323,18 +332,32 @@ if __name__ == '__main__':
     ''' Sensors with pressure > 1e-1 are appended with a rightarrow to indicate the axis they will be plotted '''
     ''' Sensors with pressures < 1e-1 are plotted wit a left-arrow on the left axis '''
     
+    labels_begin=labels
+        
+    ''' Prepares and writes logfile '''  
+    times.append(mdate.datestr2num(datenow))            #and append it to times list
+    #write header if logfile was never used ...
+    header = 'Time\t\t\t\t\t'\
+            + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
+            + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n'
+    #... if logfile was already used add seperator 
+    if os.path.isfile(pressurelogfile_name):  
+        header = '##################### Program restarted ###################################\n'
+    with open(pressurelogfile_name, "a") as logfile:
+        logfile.write(header)
+    ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
+    labels=['','','','','','']
     for sensor_num,status in enumerate(stat):
         logging.debug('##########updating pressures inside main()##############')
         logging.info('Sensor: ' + str(sensor_num))
-        ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
         if status == 0:
             logging.info('Channel OK')
             pressures[sensor_num].append(stpre[sensor_num])
             if plot:
                 if pressures[sensor_num][-1] > 1e-1:
-                    labels[sensor_num] = labels_begin[sensor_num]+r' $\rightarrow$ %.2f mbar'%pressures[sensor_num][-1]
+                    labels[sensor_num] = labels_begin[sensor_num]+r' $\rightarrow$ %.2e mbar'%pressures[sensor_num][-1]
                 elif pressures[sensor_num][-1] <= 1e-1:
-                    labels[sensor_num] = labels_begin[sensor_num]+r' $\leftarrow$ %.2f mbar'%pressures[sensor_num][-1]
+                    labels[sensor_num] = labels_begin[sensor_num]+r' $\leftarrow$ %.2e mbar'%pressures[sensor_num][-1]
         elif status == 1:
             logging.warning('Channel Underrange')
             pressures[sensor_num].append(1e10)
@@ -359,20 +382,8 @@ if __name__ == '__main__':
             logging.error('Channel Identification Error')
             pressures[sensor_num].append(1e10)
             if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
-    ''' Prepares and writes logfile '''  
-    times.append(mdate.datestr2num(datenow))            #and append it to times list
-    #write header if logfile was never used ...
-    header = 'Time\t\t\t\t\t'\
-            + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
-            + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n'
-    #... if logfile was already used add seperator 
-    if os.path.isfile(pressurelogfile_name):  
-        header = '##################### Program restarted ###################################\n'
     with open(pressurelogfile_name, "a") as logfile:
-        logfile.write(header)
-        logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"\
-		%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))    
-    
+        logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))  
     ''' Prepare plot '''
     if plot:
         logging.debug('Preparing plot')
@@ -411,7 +422,7 @@ if __name__ == '__main__':
         logging.debug('Loop-Top')
         ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
         ''' This should be done via a try: except: statement to make it exit nicely '''
-        
+        labels=['','','','','','']
         ''' Continuously read data '''
         if ser.is_open:
             status,pre = read_gauges(ser)
@@ -422,52 +433,53 @@ if __name__ == '__main__':
             ser.close()
         
         ''' Keep track of changing labels - Crashes program when labels are changed!'''
-        #labels_old = labels
-        #if not labels_old == labels:
-        #    with open(pressurelogfile_name, "a") as logfile:
-        #        logfile.write('#labelschanged')
-        #        logfile.write('Time\t\t\t\t\t'\
-        #        + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
-        #        + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n')
-
+        """
+        labels_old = labels
+        if not labels_old == labels:
+            with open(pressurelogfile_name, "a") as logfile:
+                logfile.write('#labelschanged')
+                logfile.write('Time\t\t\t\t\t'\
+               + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
+               + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n')
+        """
         datenow = dt.datetime.now().strftime(date_fmt)
         times.append(mdate.datestr2num(datenow))
         
         ''' To update the legend when a sensor is switched on/off we have to check every time we read a value '''
         ''' Updates Values in pressure lists '''
-        #ax.legend_.remove()
+        ax.legend_.remove()
         for num,sensor in enumerate(status):
             if sensor == 0:
                 pressures[num].append(pre[num])
                 if plot:
                     if pressures[num][-1] > 1e-1:
-                        labels[num] = labels_begin[num]+r' $\rightarrow$ %.2f mbar'%pressures[num][-1]
+                        labels[num] = labels_begin[num]+r' $\rightarrow$ %.2e mbar'%pressures[num][-1]
                     elif pressures[num][-1] <= 1e-1:
-                        labels[num] = labels_begin[num]+r' $\leftarrow$ %.2f mbar'%pressures[num][-1]
+                        labels[num] = labels_begin[num]+r' $\leftarrow$ %.2e mbar'%pressures[num][-1]
             elif sensor == 1:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Underrange'
+                labels[num] = labels_begin[num]+' - Underrange'
             elif sensor == 2:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Overrange'
+                labels[num] = labels_begin[num]+' - Overrange'
             elif sensor == 3:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Error'
+                labels[num] = labels_begin[num]+' - Error'
             elif sensor == 4:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Off'
+                labels[num] = labels_begin[num]+' - Off'
             elif sensor == 5:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Not found'
+                labels[num] = labels_begin[num]+' - Not found'
             elif sensor == 6:
                 pressures[num].append(1e10)
-                #labels[num] = labels_begin[num]+' - Identification error'
+                labels[num] = labels_begin[num]+' - Identification error'
         
         ''' Write to log '''
         with open(pressurelogfile_name, "a") as logfile:
             logfile.write('%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n'%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
         ''' Update console output '''
-        update_terminal(datenow,labels,pressures)
+        update_terminal(datenow,labels_begin,pressures)
         ''' Update plot '''
         if plot:
             for j in range(6):
