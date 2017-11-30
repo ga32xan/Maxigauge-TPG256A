@@ -5,4 +5,5 @@
 
 ## Changed usage:
 * Start pressure recording with Pressure-reading.py
+* Create a united logfile from the logfiles you want to plot
 * Plot logfile with Plot-pressure.py
