@@ -1,9 +1,13 @@
+
 # Maxigauge-TPG256A Serial Port Reader
 * Reads Pfeiffer Maxigauge TPG256A over serial connection and creates logfile
-* Plots graph with self-updating labels and indicated pressure
-* Dynamically update pressure gauges for their reported status
+* Creates command line output for the six channels wit indicated pressure
 
 ## Changed usage:
 * Start pressure recording with Pressure-reading.py
 * Create a united logfile from the logfiles you want to plot
 * Plot logfile with Plot-pressure.py
+
+### Optional but not production:
+* Real-time plot data in a seperate window
+* Dynamically update pressure gauges for their reported status
