@@ -113,7 +113,7 @@ logging.info('Using COM-Port : ' + str(com_port))
 logging.info('Pressure Logging goes to : ' + pressurelogfile_name)
 logging.info('Program Logging goes to : ' + programlogfile_name)
 logging.info('Program Debug level is : ' + arguments.loglevel + '(' + str(numeric_loglevel) + ')')
-logging.info('Do i plot something? : ' + str(plot))
+logging.info('Shall i plot something? : ' + str(plot))
 
 
 ################################################################################
@@ -137,11 +137,11 @@ def read_gauges(ser):
         3 Sensor error, 4 Sensor off, 5 No sensor, 6 Identification error
         '''
         logging.debug('##########splitting received pressure string##############')
-        string=read_port(ser).split(',') 		# splits read string into string[-1],string[0]
+        string = read_port(ser).split(',') 		# splits read string into string[-1],string[0]
         logging.debug(string)
-        string_pres=str(string[1])       	#pressure value converted to string
+        string_pres = str(string[1])       	#pressure value converted to string
         logging.debug('Read pressure :' + string_pres)
-        string_sta=int(string[0][-1])    	#status value converted to int
+        string_sta = int(string[0][-1])    	#status value converted to int
         logging.debug('Read status :' + str(string_sta))
         press.append(float(string_pres))    	#append float of pressure to press-list
         stat.append(int(string_sta))        	#append int(status) to status list
@@ -152,7 +152,7 @@ def send_command(ser,command):
     logging.debug('##########ser_command##############')
     input = command.encode('utf-8')   #encode as utf-8
     logging.debug('Command string: ' + str(input))
-    convinput=to_bytes(input)       #convert to byte sequence
+    convinput = to_bytes(input)       #convert to byte sequence
     logging.debug('byte-input (as str repre): ' + str(convinput.decode('utf-8')))
     logging.debug('CTS line: ' + str(ser.cts))
     logging.debug('DSR line: ' + str(ser.dsr))
@@ -178,7 +178,7 @@ def read_port(ser):
         ''' if first read msg matches snd read msg the input is believed to be consistend '''
         ''' No errror handling => program breaks at this point if no meaningfull serial connection is established '''
         logging.debug('Input buffersize: ' + str(input_buffersize))
-        logging.debug('...ser.read ...')
+        logging.info('...ser.read ...')
         input_buffersize_old = 0
         time.sleep(0.05)
         out += ser.read(64).decode('utf-8')
@@ -189,7 +189,7 @@ def read_port(ser):
         else:
             input_buffersize = input_buffersize_old
     return out
-    logging.debug('Received msg: ' + str(out))
+    logging.info('Received msg: ' + str(out))
 ################################################################################
 def test_connection(ser):
     logging.debug('##########test_connection##############')
@@ -231,7 +231,7 @@ def get_info(ser):
 ################################################################################
 def init_serial(com_port):
     ''' Initializes serial connection, defaults to COM5 '''
-    logging.debug('##########init_serial##############')
+    logging.info('Opening COM port @ COM' + str(com_port))
     try:
         ser = serial.Serial(timeout=0.5,\
 			    baudrate=9600,\
@@ -244,16 +244,14 @@ def init_serial(com_port):
         ser.reset_input_buffer()
         ser.reset_output_buffer()
         if numeric_loglevel < 3: get_info(ser)
-        logging.debug('init_serial on COM' + str(com_port) + 'succesfully')
+        logging.info('COM port initialized.')
         return ser
     except IndexError as err:
-        logging.critical('Opening of com-port failed')
+        logging.critical('Opening of com-port failed' + str(IndexError))
         print('Failed opening serial port at port' + str(ser.port))
         print('Make sure you are on the right COM port and try reloading the console')
 ################################################################################
 def to_bytes(seq):
-    logging.debug('##########to_serial##############')
-
     """convert a sequence of int/str to a byte sequence and returns it"""
     if isinstance(seq, bytes):
         return seq
@@ -266,17 +264,27 @@ def to_bytes(seq):
         for item in seq:
             b.append(item)  # this one handles int and str for our emulation and ints for Python 3.x
         return bytes(b)
-        logging.debug('Byte-conversion for ' + str(seq) + ' done')
+        logging.debug('Byte-conversion for ' + str(seq) + ' done: Resulting string:' + str(b))
 ###############################################################################
 def update_terminal(time,labels,pressures):
     os.system('cls' if os.name == 'nt' else 'clear')        #clear console screen
-    pressures_show=[]
-    pressures_last=[]
+    pressures_show=[]   # used to hold the displayed value          # for all six sensors
+    pressures_last=[]   # used to hold the last read pressure value # for all six sensors
     for j in range(6):
-        pressures_last.append(pressures[j][-1])
+        pressures_last.append(pressures[j][-1]) # appends the last read value (float) for each channel 
     for n,i in enumerate(pressures_last):
-        if i==1e10:
-            pressures_show.append('NAN')
+        if i == 1e10:                           # see append_pressure_reading() for pressure-encoded error strings
+            pressures_show.append('Underrange')        # appends status string
+        if i == 1e11:
+            pressures_show.append(' Overrange')
+        if i == 1e12:
+            pressures_show.append('   Error  ')
+        if i == 1e13:
+            pressures_show.append('   Off    ')
+        if i == 1e14:
+            pressures_show.append(' Not found')
+        if i == 1e15:
+            pressures_show.append(' Ident Err')
         else:
             pressures_show.append(str(i))
     print(time + ': \t ... running ...')
@@ -290,7 +298,7 @@ def update_terminal(time,labels,pressures):
 ###############################################################################
 def get_labels(ser):
     send_command(ser, 'CID\r\n')  # request channel
-    ''' Check for ACK '''
+    ''' Check for ACK = still not done!!!!'''
     send_command(ser, '\x05')     # enquire data
     labels_raw = read_port(ser).split(',')
     logging.debug('Receiving channel names:')
@@ -303,50 +311,25 @@ def get_labels(ser):
     labels = [labels_raw[0][3:],labels_raw[1],labels_raw[2],labels_raw[3],labels_raw[4],labels_raw[5][:-2]]
     logging.info('Returning Labels: ' + str(labels) + 'typeof' + str(type(labels)))
     return labels
-########################################## Main routine ########################
-if __name__ == '__main__':
-    ''' Messy routine that updates the data, plot it and updates the logfile '''
-    ''' Every time the program is started and writes to the same logfile a line of # is added '''
-    ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
-    print('... starting up ...')
-    logging.debug('##########main()##############')
-    logging.debug(arguments)
-    logging.info('... starting up ...')
-    date_fmt = '%d-%m-%Y %H:%M:%S'
-    datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
-    pressures = [[],[],[],[],[],[]] #six membered list of lists that holds pressure data
-    ''' 
-    [[CH1p1, CH1p2, ..., CH1pn], [CH2p1, CH2p2, ..., CH2pn], ... , [CH6p1, CH6p2, ..., CH6pn]]
-    '''
-    ser = init_serial(com_port) #initialize at this port
+################################################################################
+def append_pressure_reading(ser,pressures,labels):
     
-    times = []  #  list when pressures are recorded (approximately)
-    labels = get_labels(ser)
-         
     ''' read gauges, pass serial connection to them, returns (stat,press) '''
     ''' stat = [(int)] = [0,,0,5,5,5] & press = [float] = [1e-1,1e-10,1e-10,2e-2,2e-2,2e-2] '''
     ''' these are to be processed before written to log file '''
-    stat,stpre=read_gauges(ser)    
     
-    ''' The following creates the labels for the plot '''
-    ''' Sensors with pressure > 1e-1 are appended with a rightarrow to indicate the axis they will be plotted '''
-    ''' Sensors with pressures < 1e-1 are plotted wit a left-arrow on the left axis '''
+    ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
+    ''' This should be done via a try: except: statement to make it exit nicely '''
+    if ser.is_open:
+            stat,stpre = read_gauges(ser)
+            ser.close()
+        else:
+            ser.open()
+            stat,stpre = read_gauges(ser)
+            ser.close()
+            
+    stat,stpre=read_gauges(ser)
     
-    labels_begin=labels
-        
-    ''' Prepares and writes logfile '''  
-    times.append(mdate.datestr2num(datenow))            #and append it to times list
-    #write header if logfile was never used ...
-    header = 'Time\t\t\t\t\t'\
-            + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
-            + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n'
-    #... if logfile was already used add seperator 
-    if os.path.isfile(pressurelogfile_name):  
-        header = '##################### Program restarted ###################################\n'
-    with open(pressurelogfile_name, "a") as logfile:
-        logfile.write(header)
-    ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
-    labels=['','','','','','']
     for sensor_num,status in enumerate(stat):
         logging.debug('##########updating pressures inside main()##############')
         logging.info('Sensor: ' + str(sensor_num))
@@ -364,125 +347,61 @@ if __name__ == '__main__':
             if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Underrange'
         elif status == 2:
             logging.warning('Channel Overrange')
-            pressures[sensor_num].append(1e10)
+            pressures[sensor_num].append(1e11)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Overrange'
         elif status == 3:
             logging.error('Channel Error')
-            pressures[sensor_num].append(1e10)
+            pressures[sensor_num].append(1e12)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Error'
         elif status == 4:
             logging.info('Channel Off')
-            pressures[sensor_num].append(1e10)
+            pressures[sensor_num].append(1e13)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Off'
         elif status == 5:
             logging.info('Channel Not found')
-            pressures[sensor_num].append(1e10)
+            pressures[sensor_num].append(1e14)
             if plot:  labels[sensor_num] = labels_begin[sensor_num]+' - Not found'
         elif status == 6:
             logging.error('Channel Identification Error')
-            pressures[sensor_num].append(1e10)
+            pressures[sensor_num].append(1e15)
             if plot: labels[sensor_num] = labels_begin[sensor_num]+' - Identification error'
-    with open(pressurelogfile_name, "a") as logfile:
-        logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))  
-    ''' Prepare plot '''
-    if plot:
-        logging.debug('Preparing plot')
-        fig = plt.figure(figsize=(10,6),dpi=100)
-        ax = fig.add_subplot(111)
-        plt.ion()                      #autoupdate plot
-        plt.yscale('log')
+        return pressures, labels
+################################################################################
+def init_plot(labels,prssures):
+    logging.debug('Preparing plot')
+    fig = plt.figure(figsize=(10,6),dpi=100)
+    ax = fig.add_subplot(111)
+    plt.ion()                      #autoupdate plot
+    plt.yscale('log')
 
-        sens = {} 
-        col = ['b','r','g','K','c','y'] #colors
+    sens = {} 
+    col = ['b','r','g','K','c','y'] #colors
 
-        #For each sensors, choose a different color and plot them all on one axis
-        for j in range(6):
-            sens['sen{0}'.format(j)], = ax.plot(times, pressures[j], '.', ls = '-', color = col[j], label=labels[j])
-        #configure left axis
-        ax.set_ylim(1e-12,1e-4)
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Pressure [mbar]')
+    #For each sensors, choose a different color and plot them all on one axis
+    for j in range(6):
+        sens['sen{0}'.format(j)], = ax.plot(times, pressures[j], '.', ls = '-', color = col[j], label=labels[j])
+    #configure left axis
+    ax.set_ylim(1e-12,1e-4)
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Pressure [mbar]')
 
-        ax.legend()
-        plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
-        plt.gcf().autofmt_xdate()
+    ax.legend()
+    plt.gca().xaxis.set_major_formatter(mdate.DateFormatter(date_fmt))
+    plt.gcf().autofmt_xdate()
 
-        ax2 = ax.twinx()
-        #Plot every sensor with a pressure > 1e-1 on the second axis
-        for j in range(6):
-            if pressures[j][-1] > 1e-1:
-                sens['sen{0}'.format(j)], = ax2.plot(times, pressures[j], '.', ls = '-', color = col[j])
-        #configure right axis            
-        ax2.set_ylim(1e-1,1e3)
-        ax2.set_yscale('log')
-        ax2.set_ylabel('Pressure [mbar]')
-    
-    logging.info('Start Looping')
-    while True:
-        logging.debug('Loop-Top')
-        ''' Keep Com port open for only a short amount of time so that if the program is killed it is most likely in a closed state '''
-        ''' This should be done via a try: except: statement to make it exit nicely '''
-        labels=['','','','','','']
-        ''' Continuously read data '''
-        if ser.is_open:
-            status,pre = read_gauges(ser)
-            ser.close()
-        else:
-            ser.open()
-            status,pre = read_gauges(ser)
-            ser.close()
-        
-        ''' Keep track of changing labels - Crashes program when labels are changed!'''
-        """
-        labels_old = labels
-        if not labels_old == labels:
-            with open(pressurelogfile_name, "a") as logfile:
-                logfile.write('#labelschanged')
-                logfile.write('Time\t\t\t\t\t'\
-               + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
-               + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n')
-        """
-        datenow = dt.datetime.now().strftime(date_fmt)
-        times.append(mdate.datestr2num(datenow))
-        
-        ''' To update the legend when a sensor is switched on/off we have to check every time we read a value '''
-        ''' Updates Values in pressure lists '''
-        ax.legend_.remove()
-        for num,sensor in enumerate(status):
-            if sensor == 0:
-                pressures[num].append(pre[num])
-                if plot:
-                    if pressures[num][-1] > 1e-1:
-                        labels[num] = labels_begin[num]+r' $\rightarrow$ %.2e mbar'%pressures[num][-1]
-                    elif pressures[num][-1] <= 1e-1:
-                        labels[num] = labels_begin[num]+r' $\leftarrow$ %.2e mbar'%pressures[num][-1]
-            elif sensor == 1:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Underrange'
-            elif sensor == 2:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Overrange'
-            elif sensor == 3:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Error'
-            elif sensor == 4:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Off'
-            elif sensor == 5:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Not found'
-            elif sensor == 6:
-                pressures[num].append(1e10)
-                labels[num] = labels_begin[num]+' - Identification error'
-        
-        ''' Write to log '''
-        with open(pressurelogfile_name, "a") as logfile:
-            logfile.write('%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n'%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
-        ''' Update console output '''
-        update_terminal(datenow,labels_begin,pressures)
-        ''' Update plot '''
-        if plot:
-            for j in range(6):
+    ax2 = ax.twinx()
+    #Plot every sensor with a pressure > 1e-1 on the second axis
+    for j in range(6):
+        if pressures[j][-1] > 1e-1:
+            sens['sen{0}'.format(j)], = ax2.plot(times, pressures[j], '.', ls = '-', color = col[j])
+    #configure right axis            
+    ax2.set_ylim(1e-1,1e3)
+    ax2.set_yscale('log')
+    ax2.set_ylabel('Pressure [mbar]')
+    return fig,ax,ax2
+################################################################################
+def update_plot(ax,times,pressures,labels):
+    for j in range(6):
                 sens['sen{0}'.format(j)].set_xdata(times)
                 sens['sen{0}'.format(j)].set_ydata(pressures[j])
                 sens['sen{0}'.format(j)].set_label(labels[j])
@@ -492,4 +411,69 @@ if __name__ == '__main__':
             ax.set_xlim(times[0]-(times[1]-times[0]),times[-1]+(times[1]-times[0]))
             #asis range: 12h
             #ax.set_xlim(dt.datetime.now()-dt.timedelta(hours=12),times[-1]+(times[1]-times[0]))
-            plt.pause(1)
+    return ax 
+########################################## Main routine ########################
+if __name__ == '__main__':
+    ''' Messy routine that updates the data, plot it and updates the logfile '''
+    ''' Every time the program is started and writes to the same logfile a line of # is added '''
+    ''' TODO: cleanup, write subroutine update_plot and write_logfile '''
+    print('... starting up ...')
+    #logging.debug('##########main()##############')
+    logging.debug('Starting with argv[n]: ' + arguments)
+    logging.info('... starting up ...')
+    date_fmt = '%d-%m-%Y %H:%M:%S'
+    datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
+    pressures = [[],[],[],[],[],[]]  
+    ''' pressures[[],...,[]]: six membered list of lists that holds pressure data
+    [[CH1p1, CH1p2, ..., CH1pn], [CH2p1, CH2p2, ..., CH2pn], ... , [CH6p1, CH6p2, ..., CH6pn]]
+    '''
+
+    ser = init_serial(com_port) 
+    times = []  #  list when pressures are recorded (approximately)
+    labels = get_labels(ser)
+        
+    ''' Prepares and writes logfile '''  
+    times.append(mdate.datestr2num(datenow))            #and append it to times list
+    #write header if logfile was never used ...
+    header = 'Time\t\t\t\t\t'\
+            + labels[0] + '[mbar]\t\t' + labels[1] + '[mbar]\t\t' + labels[2] + '[mbar]\t\t'\
+            + labels[3] + '[mbar]\t\t\t' + labels[4] + '[mbar]\t\t\t' + labels[5] + '[mbar]\n'
+    #... if logfile was already used add seperator 
+    if os.path.isfile(pressurelogfile_name):  
+        header = '##################### Program restarted ###################################\n'
+    with open(pressurelogfile_name, "a") as logfile:
+        logfile.write(header)
+        
+    ''' enumerate(stat) returns 0,stat[0] ... 1,stat[1] ... 2,stat[2] ... '''
+    labels=['','','','','','']
+    # append new value to pressure list
+    pressures,labels = append_pressure_reading(ser,pressures,labels)
+    # write logfile            
+    with open(pressurelogfile_name, "a") as logfile:
+        logfile.write("%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n"%(datenow,pressures[0][0],pressures[1][0],pressures[2][0],pressures[3][0],pressures[4][0],pressures[5][0]))  
+    ''' Prepare plot '''
+    if plot:
+        fig,ax,ax2 = init_plot(labels,pressures)
+        
+    while True:
+        logging.info('Start Looping')
+        ''' Continuously read data '''
+        logging.debug('Loop-Top')        
+        labels=['','','','','','']
+        datenow = dt.datetime.now().strftime(date_fmt)
+        times.append(mdate.datestr2num(datenow))
+        ''' To update the legend when a sensor is switched on/off we have to check every time we read a value '''
+        ''' Updates Values in pressure lists '''
+        ax.legend_.remove()
+        pressures,labels = append_pressure_reading(ser,pressures,labels)
+
+        ''' Write to log '''
+        with open(pressurelogfile_name, "a") as logfile:
+            logfile.write('%s\t\t%.2e\t\t%.2e\t\t%.2e\t\t%.2e\t\t\t%.2e\t\t\t%.2e\n'%(datenow,pressures[0][-1],pressures[1][-1],pressures[2][-1],pressures[3][-1],pressures[4][-1],pressures[5][-1]))
+
+        ''' Update console output '''
+        update_terminal(datenow,labels_begin,pressures)
+        ''' Update plot '''
+        if plot:
+            update_plot(ax,times,pressures,labels)
+            plt.pause(0.2)
