@@ -1,4 +1,4 @@
- # Maxigauge-TPG256A Serial Port Reader
+# Maxigauge-TPG256A Serial Port Reader
 * Reads Pfeiffer Maxigauge TPG256A over serial connection and creates logfile.
 * Creates command line output for the six channels with indicated pressures & stati.
 
@@ -10,7 +10,7 @@
 ### Optional but not production yet:
 * Real-time plot data in a seperate window with calling maxigauge-TPG256A.py with the -p flag
 
-#### (record/display):
+### (record/display):
 * prints helpline with command line options and their default values
 ``` 
 python Maxigauge-TDG256A.py -h 
@@ -28,7 +28,7 @@ python Maxigauge-TDG256A.py -c 5 [-p]
 python plot-logfile.py LOGFILE 
 ```
 
-#### (merge/plot logfiles)
+### (merge/plot logfiles)
 * merge multiplot logfiles into one big file - by default it grabs all files in the current folder ending with *pressure.log into OUTPUT
 ``` 
 python merge-logfiles.py s OUTPUT 
