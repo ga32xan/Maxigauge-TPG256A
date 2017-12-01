@@ -14,7 +14,7 @@
 #### (record/display):
 * prints helpline with command line options and their default values
 ``` 
-python read_pressure.py -h 
+python Maxigauge-TDG256A.py -h 
 ```
 * starts program with default parameters (COMport = 8, no plotting) - writes logfile to %(date) - pressure.log
 ``` 
