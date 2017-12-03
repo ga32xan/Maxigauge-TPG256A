@@ -8,15 +8,26 @@ For Windows: Anaconda is a bundled Python version (https://anaconda.org/anaconda
 For Linux: See above or sudo apt-get install python3 pip, pip install matplotlib, pip install numpy, pip install serial
 Edit this file with care and 4 space indentation
 """
-import time
+################################################################################
+''' This is for the serial connection and throughout the script :)'''
 import serial
-import matplotlib.pylab as plt
+import time
+import os
 import datetime as dt
+################################################################################
+''' This is for all the plottgin stuff '''
+import matplotlib.pylab as plt
 import matplotlib.dates as mdate
 import numpy as np
-import os
+################################################################################
+''' This is imported because of the logging facility and command line arguments '''
 import argparse # for the argument parsing stuff and -h explanation
 import logging	# for logging puposes
+################################################################################
+''' This is imported because of the module version logging '''
+import inspect
+import sys
+import re
 ################################################################################
 date_fmt = '%d-%m-%Y %H:%M:%S'
 datenow = dt.datetime.now().strftime(date_fmt)
@@ -83,7 +94,7 @@ ending = arguments.programlogfile.split('.')[1]    #file type
 prefix = '%s - '%datenow.replace(':','-')
 
 programlogfile_name = os.getcwd() + '\\' + prefix + suffix + '.' + ending
-print('Program Logging goes to : ' + programlogfile_name)
+#print('Program Logging goes to : ' + programlogfile_name)
 
 logging.basicConfig(filename = programlogfile_name,\
                     format = '%(asctime)s %(message)s',\
@@ -98,7 +109,7 @@ ending = arguments.pressurelogfile.split('.')[1]    #file type
 prefix = '%s - '%datenow.replace(':','-')
 pressurelogfile_name = os.getcwd() + '\\' + prefix + suffix + '.' + ending
 
-print('Pressure Logging goes to : ' + pressurelogfile_name)
+#print('Pressure Logging goes to : ' + pressurelogfile_name)
 
 ''' Takes argument comport from the argparser '''
 com_port = arguments.comport
@@ -107,15 +118,12 @@ com_port = arguments.comport
 ''' Set to False if script is exucuted from command line '''
 ''' Set to true if run in IDE (tested: Anaconda) '''
 plot = arguments.plot
-
-
+################################################################################
 logging.info('Using COM-Port : ' + str(com_port))
 logging.info('Pressure Logging goes to : ' + pressurelogfile_name)
 logging.info('Program Logging goes to : ' + programlogfile_name)
 logging.info('Program Debug level is : ' + arguments.loglevel + '(' + str(numeric_loglevel) + ')')
 logging.info('Do i plot something? : ' + str(plot))
-
-
 ################################################################################
 def read_gauges(ser):
     ''' Reads all 6 channels and returns status and (if applicable) pressure '''
@@ -229,6 +237,21 @@ def get_info(ser):
     print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
     print('RS485 settings: ' +  str(ser.rs485_mode))
 ################################################################################
+def get_module_info():
+''' This will print all the used modules together with their mapping to the logfile '''
+    for name, val in sys._getframe(1).f_locals.items():
+        if inspect.ismodule(val):
+
+            fullnm = str(val)
+
+            if not '(built-in)' in fullnm and \
+               not __name__     in fullnm:
+                m = re.search(r"'(.+)'.*'(.+)'", fullnm)
+                module,path = m.groups()
+                logging.info("%-12s maps to %s" % (name, path))
+                if hasattr(val, '__version__'):
+                    logging.info("version:" +  val.__version__)
+################################################################################
 def init_serial(com_port):
     ''' Initializes serial connection, defaults to COM5 '''
     logging.debug('##########init_serial##############')
@@ -311,6 +334,8 @@ if __name__ == '__main__':
     print('... starting up ...')
     logging.debug('##########main()##############')
     logging.debug(arguments)
+    if numeric_loglevel < 3: get_module_info()
+        
     logging.info('... starting up ...')
     date_fmt = '%d-%m-%Y %H:%M:%S'
     datenow = dt.datetime.now().strftime(date_fmt)      # get formatted datetime object
