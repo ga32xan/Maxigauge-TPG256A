@@ -268,7 +268,7 @@ def init_serial(com_port):
         ser.open()
         ser.reset_input_buffer()
         ser.reset_output_buffer()
-        if numeric_loglevel < 3: get_serial_info(ser)
+        if numeric_loglevel < 30: get_serial_info(ser)
         logging.debug('init_serial on COM' + str(com_port) + 'succesfully')
         return ser
     except IndexError as err:
