@@ -38,7 +38,7 @@ python merge-logfiles.py s OUTPUT
 python merge-logfiles.py [LOGFILE LOGFILE ... ] s OUTPUT 
 ```
 
-### tested module versions:
+#### tested module versions:
 ```
 serial:   3.2.1
 pylab:    1.12.1
