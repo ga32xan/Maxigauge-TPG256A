@@ -19,13 +19,13 @@ python Maxigauge-TDG256A.py -h
 ``` 
 python Maxigauge-TDG256A.py 
 ```
-* starts logfile-writing on COM port 5 and enables real-time plotting 
+* starts on COM port 5 [and enables real-time plotting]
 ``` 
 python Maxigauge-TDG256A.py -c 5 [-p] 
 ```
-* plots single logfile given as command line argument LOGFILE
+* starts with loglevel info
 ``` 
-python plot-logfile.py LOGFILE 
+python Maxigauge-TDG256A.py -v info
 ```
 
 ### merge/plot logfiles:
@@ -36,6 +36,10 @@ python merge-logfiles.py s OUTPUT
 * merge given logfiles into OUTPUT
 ```
 python merge-logfiles.py [LOGFILE LOGFILE ... ] s OUTPUT 
+```
+* plots single logfile given as command line argument LOGFILE
+``` 
+python plot-logfile.py LOGFILE 
 ```
 
 #### tested module versions:
