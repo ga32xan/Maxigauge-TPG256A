@@ -40,10 +40,10 @@ python merge-logfiles.py [LOGFILE LOGFILE ... ] s OUTPUT
 
 ### tested module versions:
 ```
-serial: 3.2.1
-pylab: 1.12.1
-numpy: 1.12.1
+serial:   3.2.1
+pylab:    1.12.1
+numpy:    1.12.1
 argparse: 1.1
-logging: 0.5.1.2
-re: 2.2.1
+logging:  0.5.1.2
+re:       2.2.1
 ```
