@@ -31,15 +31,15 @@ python Maxigauge-TDG256A.py -v info
 ### merge/plot logfiles:
 * merge multiplot logfiles into one big file - by default it grabs all files in the current folder ending with *pressure.log into OUTPUT
 ``` 
-python merge-logfiles.py s OUTPUT 
+python merge-logfiles.py s SINGLELOGFILE 
 ```
 * merge given logfiles into OUTPUT
 ```
-python merge-logfiles.py [LOGFILE LOGFILE ... ] s OUTPUT 
+python merge-logfiles.py [LOGFILE LOGFILE ... ] s SINGLELOGFILE 
 ```
-* plots single logfile given as command line argument LOGFILE
+* plots single logfile given as command line argument SINGLELOGFILE
 ``` 
-python plot-logfile.py LOGFILE 
+python plot-logfile.py SINGLELOGFILE 
 ```
 
 #### tested module versions:
