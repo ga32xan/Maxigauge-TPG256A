@@ -121,7 +121,7 @@ plot = arguments.plot
 ################################################################################
 logging.info('Using COM-Port : ' + str(com_port))
 logging.info('Pressure Logging goes to : ' + pressurelogfile_name)
-logging.info('Program Logging goes to : ' + programlogfile_name)
+logging.info('Program Logging goes to  : ' + programlogfile_name)
 logging.info('Program Debug level is : ' + arguments.loglevel + '(' + str(numeric_loglevel) + ')')
 logging.info('Do i plot something? : ' + str(plot))
 ################################################################################
@@ -208,9 +208,9 @@ def test_connection(ser):
     if True:
         ''' !Some Check routine missing! '''
 ################################################################################
-def get_info(ser):
+def get_serial_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
-    logging.debug('##########get_info##############')
+    logging.debug('##########get_serial_info##############')
     logging.debug('Printing information about connection to console')
     print('############ Information about connection: ############')
     print('Name of device: ' + ser.name)
@@ -238,7 +238,7 @@ def get_info(ser):
     print('RS485 settings: ' +  str(ser.rs485_mode))
 ################################################################################
 def get_module_info():
-''' This will print all the used modules together with their mapping to the logfile '''
+    ''' This will print all the used modules together with their mapping to the logfile '''
     for name, val in sys._getframe(1).f_locals.items():
         if inspect.ismodule(val):
 
@@ -251,6 +251,8 @@ def get_module_info():
                 logging.info("%-12s maps to %s" % (name, path))
                 if hasattr(val, '__version__'):
                     logging.info("version:" +  val.__version__)
+                else:
+                    logging.info("No version listed in val.__version__")
 ################################################################################
 def init_serial(com_port):
     ''' Initializes serial connection, defaults to COM5 '''
@@ -266,7 +268,7 @@ def init_serial(com_port):
         ser.open()
         ser.reset_input_buffer()
         ser.reset_output_buffer()
-        if numeric_loglevel < 3: get_info(ser)
+        if numeric_loglevel < 3: get_serial_info(ser)
         logging.debug('init_serial on COM' + str(com_port) + 'succesfully')
         return ser
     except IndexError as err:
@@ -299,11 +301,11 @@ def update_terminal(time,labels,pressures):
         pressures_last.append(pressures[j][-1])
     for n,i in enumerate(pressures_last):
         if i==1e10:
-            pressures_show.append('NAN')
+            pressures_show.append('\tNAN   ')
         else:
             pressures_show.append(str(i))
     print(time + ': \t ... running ...')
-    print('Program Logging goes to : ' + programlogfile_name)
+    print('Program Logging goes to  : ' + programlogfile_name)
     print('Pressure Logging goes to : ' + pressurelogfile_name)
     print('#################################################################################################')
     print('#\t' + labels[0] + '\t|\t'  + labels[1] + ' \t|\t'  + labels[2] + ' \t|\t'  + labels[3] + ' \t|\t'  + labels[4] + ' \t|\t'  + labels[5] + ' \t#')
@@ -324,7 +326,7 @@ def get_labels(ser):
     logging.debug(labels_raw[4])
     logging.debug(labels_raw[5][:-2])  # slices  ending \r\n'
     labels = [labels_raw[0][3:],labels_raw[1],labels_raw[2],labels_raw[3],labels_raw[4],labels_raw[5][:-2]]
-    logging.info('Returning Labels: ' + str(labels) + 'typeof' + str(type(labels)))
+    logging.info('Returning Labels: ' + str(labels))
     return labels
 ########################################## Main routine ########################
 if __name__ == '__main__':
@@ -334,7 +336,7 @@ if __name__ == '__main__':
     print('... starting up ...')
     logging.debug('##########main()##############')
     logging.debug(arguments)
-    if numeric_loglevel < 3: get_module_info()
+    if numeric_loglevel < 30: get_module_info()
         
     logging.info('... starting up ...')
     date_fmt = '%d-%m-%Y %H:%M:%S'
@@ -472,7 +474,7 @@ if __name__ == '__main__':
         
         ''' To update the legend when a sensor is switched on/off we have to check every time we read a value '''
         ''' Updates Values in pressure lists '''
-        ax.legend_.remove()
+        if plot: ax.legend_.remove()
         for num,sensor in enumerate(status):
             if sensor == 0:
                 pressures[num].append(pre[num])
