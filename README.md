@@ -4,11 +4,11 @@
 
 ## Usage:
 * Start pressure recording with python Maxigauge-TPG256A.py 
-* Plot logfile with plot-logfiles.py
+* Plot logfile with plot-logfile.py
 * Create a united logfile from the logfiles you want to plot with merge-logfiles.py
-
-### Optional but not production yet:
 * Real-time plot data in a seperate window with calling maxigauge-TPG256A.py with the -p flag
+
+## Program and pressure logfiles are written in the folder where the program get executed from. NOT necessarily where the python file resides!
 
 ### record/display:
 * prints helpline with command line options and their default values
