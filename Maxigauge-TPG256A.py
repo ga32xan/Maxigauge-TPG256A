@@ -208,36 +208,36 @@ def test_connection(ser):
     if True:
         ''' !Some Check routine missing! '''
 ################################################################################
-def get_serial_info(ser):
+def log_serial_info(ser):
     ''' Get information about the serial connection, prints only if debug2 = True '''
-    logging.debug('##########get_serial_info##############')
-    logging.debug('Printing information about connection to console')
-    print('############ Information about connection: ############')
-    print('Name of device: ' + ser.name)
-    print('@ port : ' + ser.port)
-    print('Port is open?: ' + str(ser.is_open))
-    print('state of ...')
-    print('   ... CTS line: ' + str(ser.cts))
-    print('   ... DSR line: ' + str(ser.dsr))
-    print('   ...  RI line: ' + str(ser.ri))
-    print('   ...  CD line: ' + str(ser.cd))
+    logging.debug('##########log_serial_info##############')
+    
+    logging.debug('############ Information about connection: ############')
+    logging.debug('Name of device: ' + ser.name)
+    logging.debug('@ port : ' + ser.port)
+    logging.debug('Port is open?: ' + str(ser.is_open))
+    logging.debug('state of ...')
+    logging.debug('   ... CTS line: ' + str(ser.cts))
+    logging.debug('   ... DSR line: ' + str(ser.dsr))
+    logging.debug('   ...  RI line: ' + str(ser.ri))
+    logging.debug('   ...  CD line: ' + str(ser.cd))
 
-    print('############ Can set values to: ######################')
-    print('port: ' + ser.port)
-    print('baudrate: ' + str(ser.baudrate))
-    print('bitesyze: ' + str(ser.bytesize))
-    print('parity: ' + str(ser.parity))
-    print('stopbits: ' + str(ser.stopbits))
-    print('read_timeout: ' + str(ser.timeout))
-    print('write_timeout: ' + str(ser.write_timeout))
-    print('inter byte timeout: ' + str(ser.inter_byte_timeout))
-    print('software flow control setting: ' + str(ser.xonxoff))
-    print('hardware flow control setting of ... ')
-    print('\t \t \t \t... CTS line: ' + str(ser.rtscts))
-    print('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
-    print('RS485 settings: ' +  str(ser.rs485_mode))
+    logging.debug('############ Can set values to: ######################')
+    logging.debug('port: ' + ser.port)
+    logging.debug('baudrate: ' + str(ser.baudrate))
+    logging.debug('bitesyze: ' + str(ser.bytesize))
+    logging.debug('parity: ' + str(ser.parity))
+    logging.debug('stopbits: ' + str(ser.stopbits))
+    logging.debug('read_timeout: ' + str(ser.timeout))
+    logging.debug('write_timeout: ' + str(ser.write_timeout))
+    logging.debug('inter byte timeout: ' + str(ser.inter_byte_timeout))
+    logging.debug('software flow control setting: ' + str(ser.xonxoff))
+    logging.debug('hardware flow control setting of ... ')
+    logging.debug('\t \t \t \t... CTS line: ' + str(ser.rtscts))
+    logging.debug('\t \t \t \t... DSR line: ' + str(ser.dsrdtr))
+    logging.debug('RS485 settings: ' +  str(ser.rs485_mode))
 ################################################################################
-def get_module_info():
+def log_module_info():
     ''' This will print all the used modules together with their mapping to the logfile '''
     for name, val in sys._getframe(1).f_locals.items():
         if inspect.ismodule(val):
@@ -250,9 +250,9 @@ def get_module_info():
                 module,path = m.groups()
                 logging.info("%-12s maps to %s" % (name, path))
                 if hasattr(val, '__version__'):
-                    logging.info("version:" +  val.__version__)
+                    logging.info("\t Version:" +  val.__version__)
                 else:
-                    logging.info("No version listed in val.__version__")
+                    logging.info("\t No version listed in val.__version__")
 ################################################################################
 def init_serial(com_port):
     ''' Initializes serial connection, defaults to COM5 '''
@@ -268,7 +268,7 @@ def init_serial(com_port):
         ser.open()
         ser.reset_input_buffer()
         ser.reset_output_buffer()
-        if numeric_loglevel < 30: get_serial_info(ser)
+        if numeric_loglevel < 30: log_serial_info(ser)
         logging.debug('init_serial on COM' + str(com_port) + 'succesfully')
         return ser
     except IndexError as err:
@@ -336,7 +336,7 @@ if __name__ == '__main__':
     print('... starting up ...')
     logging.debug('##########main()##############')
     logging.debug(arguments)
-    if numeric_loglevel < 30: get_module_info()
+    if numeric_loglevel < 30: log_module_info()
         
     logging.info('... starting up ...')
     date_fmt = '%d-%m-%Y %H:%M:%S'
