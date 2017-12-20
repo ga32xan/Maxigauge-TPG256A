@@ -8,7 +8,7 @@
 * Create a united logfile from the logfiles you want to plot with merge-logfiles.py
 * Real-time plot data in a seperate window with calling maxigauge-TPG256A.py with the -p flag
 
-### Program and pressure logfiles are written in the folder where the program is executed which it NOT necessarily where the python file resides!
+#### Program and pressure logfiles are written in the folder where the program is executed which it NOT necessarily where the python file resides!
 
 ### record/display:
 * prints helpline with command line options and their default values
